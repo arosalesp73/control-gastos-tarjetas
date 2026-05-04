@@ -161,7 +161,7 @@ async def guardar(
     request: Request, 
     fecha: str = Form(...), 
     tienda: str = Form(...), 
-    monto: float = Form(...), 
+    monto: str = Form(...),  # Cambiado a str para mayor flexibilidad
     tarjeta: str = Form(...)
 ):
     user_session = request.session.get("user")
@@ -169,11 +169,13 @@ async def guardar(
         return RedirectResponse("/login", status_code=303)
 
     try:
-        # CORRECCIÓN: Se eliminan las llaves dobles
+        # Convertimos el monto a decimal antes de insertar
+        monto_decimal = float(monto.replace(',', ''))
+        
         supabase.table("movimientos").insert({
             "fecha": fecha,
             "tienda": tienda,
-            "monto": monto,
+            "monto": monto_decimal,
             "tarjeta": tarjeta,
             "usuario": user_session["username"]
         }).execute()
@@ -181,7 +183,7 @@ async def guardar(
         return RedirectResponse("/", status_code=303)
     except Exception as e:
         print(f"Error al guardar movimiento: {e}")
-        return RedirectResponse("/?error=Error+al+guardar+datos", status_code=303)
+        return RedirectResponse("/?error=Error+en+el+formato+del+monto", status_code=303)
     
 # --- AQUI PEGUE EL CODIGO QUE SE SUPONE QUE DESPUES DE CREAR UN USUARIO NUEVO REGRESA A LA PAGINA ---
 @app.get("/admin", response_class=HTMLResponse)
