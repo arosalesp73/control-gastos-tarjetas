@@ -165,10 +165,24 @@ async def guardar(monto: float = Form(...), concepto: str = Form(...), fecha: st
     return RedirectResponse("/", status_code=303)
 
 @app.post("/admin/crear")
-async def crear_user(new_user: str = Form(...), new_pass: str = Form(...), user=Depends(get_current_user)):
-    if user["role"] != "admin": return "No autorizado"
-    supabase.table("usuarios").insert({{"username": new_user, "password": new_pass, "role": "user"}}).execute()
-    return RedirectResponse("/", status_code=303)
+async def crear_user(request: Request, new_user: str = Form(...), new_pass: str = Form(...)):
+    # Verificamos sesión de admin
+    user_session = request.session.get("user")
+    if not user_session or user_session.get("role") != "admin":
+        return RedirectResponse("/login", status_code=303)
+
+    try:
+        # CORRECCIÓN: Quitamos las llaves dobles que causaban el TypeError
+        supabase.table("usuarios").insert({
+            "username": new_user, 
+            "password": new_pass, 
+            "role": "user"
+        }).execute()
+        
+        return RedirectResponse("/admin?msg=Usuario+creado+exitosamente", status_code=303)
+    except Exception as e:
+        print(f"Error al crear usuario: {e}")
+        return RedirectResponse(f"/admin?error=Error+al+crear+usuario", status_code=303)
 
 @app.get("/descargar")
 async def descargar(inicio: str, fin: str, user=Depends(get_current_user)):
