@@ -114,16 +114,47 @@ async def index(request: Request):
     """
 
 @app.get("/login", response_class=HTMLResponse)
-async def login_ui():
-    return f"<html><head><meta name='viewport' content='width=device-width, initial-scale=1'><style>{DARK_CSS}</style></head><body class='container'><div class='card'><h2>Control de Gastos</h2><form action='/login' method='post'><input name='username' class='form-control' placeholder='Usuario'><input name='password' type='password' class='form-control' placeholder='Contraseña'><button class='btn-main'>Entrar</button></form></div></body></html>"
+async def login_ui(request: Request, error: str = None):
+    # Si recibimos un error en la URL, lo mostramos en un div rojo
+    error_html = f'<div style="color: #ff4d4d; margin-bottom: 15px; text-align: center; font-weight: bold;">{error}</div>' if error else ""
+    
+    return f"""
+    <html>
+    <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <style>{DARK_CSS}</style>
+    </head>
+    <body class="container">
+        <div class="card">
+            <h2 style="text-align:center">Control de Gastos</h2>
+            {error_html}
+            <form action="/login" method="post">
+                <input name="username" class="form-control" placeholder="Usuario" required autocomplete="off">
+                <input name="password" type="password" class="form-control" placeholder="Contraseña" required>
+                <button class="btn-main">Entrar</button>
+            </form>
+        </div>
+    </body>
+    </html>
+    """
 
 @app.post("/login")
-async def login_action(request: Request, username: str = Form(...), password: str = Form(...)):
-    res = supabase.table("usuarios").select("*").eq("username", username).eq("password", password).execute()
-    if res.data:
-        request.session["user"] = res.data[0]
-        return RedirectResponse("/", status_code=303)
-    return "Credenciales incorrectas."
+async def login(request: Request, username: str = Form(...), password: str = Form(...)):
+    try:
+        # Consulta limpia a Supabase
+        res = supabase.table("usuarios").select("*").eq("username", username).eq("password", password).execute()
+        
+        if res.data and len(res.data) > 0:
+            request.session["user"] = res.data[0]
+            return RedirectResponse("/", status_code=303)
+        else:
+            # Redirige de vuelta al login con un mensaje de error amigable
+            return RedirectResponse("/login?error=Usuario+o+clave+incorrectos", status_code=303)
+            
+    except Exception as e:
+        # En caso de error de conexión, también redirige con aviso
+        print(f"Error de sistema: {e}")
+        return RedirectResponse("/login?error=Error+de+conexion+con+el+servidor", status_code=303)
 
 @app.post("/guardar")
 async def guardar(monto: float = Form(...), concepto: str = Form(...), fecha: str = Form(...), tipo: str = Form(...), user=Depends(get_current_user)):
