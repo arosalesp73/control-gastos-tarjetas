@@ -5,3 +5,4 @@ openpyxl
 supabase
 python-multipart
 starlette
+itsdangerous
