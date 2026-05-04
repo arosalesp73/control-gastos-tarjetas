@@ -163,7 +163,47 @@ async def guardar(monto: float = Form(...), concepto: str = Form(...), fecha: st
         "concepto": concepto, "monto": final_monto, "fecha": fecha, "usuario_id": user["id"]
     }}).execute()
     return RedirectResponse("/", status_code=303)
+    
+# --- AQUI PEGUE EL CODIGO QUE SE SUPONE QUE DESPUES DE CREAR UN USUARIO NUEVO REGRESA A LA PAGINA ---
+@app.get("/admin", response_class=HTMLResponse)
+async def admin_ui(request: Request, msg: str = None, error: str = None):
+    # Verificamos sesión
+    user_session = request.session.get("user")
+    if not user_session or user_session.get("role") != "admin":
+        return RedirectResponse("/login", status_code=303)
 
+    # Preparamos avisos de éxito o error
+    alert = ""
+    if msg:
+        alert = f'<div style="color: #2ecc71; margin-bottom: 15px; text-align: center;">{msg}</div>'
+    if error:
+        alert = f'<div style="color: #e74c3c; margin-bottom: 15px; text-align: center;">{error}</div>'
+    
+    return f"""
+    <html>
+    <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <style>{DARK_CSS}</style>
+    </head>
+    <body class="container">
+        <div class="card">
+            <h2 style="text-align:center">Panel de Administración</h2>
+            {alert}
+            <div style="margin-bottom: 20px;">
+                <a href="/" style="color: var(--primary); text-decoration: none;">← Volver al Inicio</a>
+            </div>
+            
+            <form action="/admin/crear" method="post">
+                <h3>Crear Nuevo Usuario</h3>
+                <input name="new_user" class="form-control" placeholder="Nuevo Usuario" required>
+                <input name="new_pass" type="password" class="form-control" placeholder="Contraseña" required>
+                <button class="btn-main">Registrar Usuario</button>
+            </form>
+        </div>
+    </body>
+    </html>
+    """
+    # --- AQUI TERMINA EL CODIGO PARA REGRESAR A LA PAGINA DESPUES DE CREAR UN USUARIO NUEVO ---
 @app.post("/admin/crear")
 async def crear_user(request: Request, new_user: str = Form(...), new_pass: str = Form(...)):
     # Verificamos sesión de admin
