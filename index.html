@@ -1,0 +1,106 @@
+<!-- Estructura Principal -->
+<div class="app-container">
+    <div class="card">
+        <h3>Nuevo Registro</h3>
+        
+        <!-- Prioridad 1: Selector de tipo -->
+        <div class="selector-container">
+            <input type="radio" id="gasto" name="tipo_mov" value="compra" checked>
+            <label for="gasto" class="opcion gasto">🛍️ Compra</label>
+            
+            <input type="radio" id="abono" name="tipo_mov" value="abono">
+            <label for="abono" class="opcion abono">💰 Abono</label>
+        </div>
+
+        <!-- Inputs del formulario -->
+        <div class="inputs-group">
+            <input type="text" id="tarjeta" placeholder="Nombre de la Tarjeta">
+            <input type="number" id="monto" placeholder="Monto $">
+            <input type="text" id="concepto" placeholder="Concepto">
+            <button id="btnGuardar" onclick="enviarDatos()">Guardar Movimiento</button>
+        </div>
+    </div>
+</div>
+
+<script>
+async function enviarDatos() {
+    const btn = document.getElementById('btnGuardar');
+    btn.disabled = true;
+
+    // Captura de valores
+    const tipoSeleccionado = document.querySelector('input[name="tipo_mov"]:checked').value;
+    let montoValor = parseFloat(document.getElementById('monto').value);
+    const tarjetaNombre = document.getElementById('tarjeta').value;
+    const conceptoTexto = document.getElementById('concepto').value;
+
+    // Lógica Contable: Si es abono, guardamos el número como negativo para el balance final
+    const montoProcesado = (tipoSeleccionado === 'abono') ? (Math.abs(montoValor) * -1) : Math.abs(montoValor);
+
+    // Inserción en Supabase (Asegúrate de que la variable _supabase esté configurada)
+    const { data, error } = await _supabase
+        .from('movimientos') 
+        .insert([
+            { 
+                tarjeta: tarjetaNombre, 
+                monto: montoProcesado, 
+                concepto: conceptoTexto, 
+                tipo: tipoSeleccionado,
+                fecha: new Date().toISOString().split('T')[0]
+            }
+        ]);
+
+    if (error) {
+        alert("Error al guardar: " + error.message);
+    } else {
+        alert("✅ Registrado correctamente");
+        location.reload(); 
+    }
+    btn.disabled = false;
+}
+</script>
+
+<style>
+/* Responsividad y Ajustes para Móvil */
+* { box-sizing: border-box; }
+body { 
+    margin: 0; padding: 0; 
+    background-color: #f0f2f5;
+    font-family: sans-serif;
+    display: flex; justify-content: center;
+    min-height: 100vh; /* Evita que se corte verticalmente */
+}
+
+.app-container { width: 100%; max-width: 450px; padding: 15px; }
+
+.card {
+    background: white; padding: 25px;
+    border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+}
+
+.selector-container {
+    display: flex; gap: 10px; margin-bottom: 25px;
+}
+
+.selector-container input { display: none; }
+
+.opcion {
+    flex: 1; padding: 15px; text-align: center;
+    border: 2px solid #ddd; border-radius: 10px;
+    cursor: pointer; font-weight: bold; transition: 0.2s;
+}
+
+/* Colores dinámicos al seleccionar */
+input[type="radio"]:checked + .opcion.gasto { border-color: #d32f2f; color: #d32f2f; background: #ffebee; }
+input[type="radio"]:checked + .opcion.abono { border-color: #388e3c; color: #388e3c; background: #e8f5e9; }
+
+.inputs-group input {
+    width: 100%; padding: 14px; margin-bottom: 15px;
+    border: 1px solid #ccc; border-radius: 8px; font-size: 16px;
+}
+
+button {
+    width: 100%; padding: 16px; background: #1a73e8;
+    color: white; border: none; border-radius: 8px;
+    font-size: 18px; font-weight: bold; cursor: pointer;
+}
+</style>
