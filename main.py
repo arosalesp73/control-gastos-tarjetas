@@ -157,12 +157,31 @@ async def login(request: Request, username: str = Form(...), password: str = For
         return RedirectResponse("/login?error=Error+de+conexion+con+el+servidor", status_code=303)
 
 @app.post("/guardar")
-async def guardar(monto: float = Form(...), concepto: str = Form(...), fecha: str = Form(...), tipo: str = Form(...), user=Depends(get_current_user)):
-    final_monto = abs(monto) if tipo == "compra" else -abs(monto)
-    supabase.table("movimientos").insert({{
-        "concepto": concepto, "monto": final_monto, "fecha": fecha, "usuario_id": user["id"]
-    }}).execute()
-    return RedirectResponse("/", status_code=303)
+async def guardar(
+    request: Request, 
+    fecha: str = Form(...), 
+    tienda: str = Form(...), 
+    monto: float = Form(...), 
+    tarjeta: str = Form(...)
+):
+    user_session = request.session.get("user")
+    if not user_session:
+        return RedirectResponse("/login", status_code=303)
+
+    try:
+        # CORRECCIÓN: Se eliminan las llaves dobles
+        supabase.table("movimientos").insert({
+            "fecha": fecha,
+            "tienda": tienda,
+            "monto": monto,
+            "tarjeta": tarjeta,
+            "usuario": user_session["username"]
+        }).execute()
+        
+        return RedirectResponse("/", status_code=303)
+    except Exception as e:
+        print(f"Error al guardar movimiento: {e}")
+        return RedirectResponse("/?error=Error+al+guardar+datos", status_code=303)
     
 # --- AQUI PEGUE EL CODIGO QUE SE SUPONE QUE DESPUES DE CREAR UN USUARIO NUEVO REGRESA A LA PAGINA ---
 @app.get("/admin", response_class=HTMLResponse)
