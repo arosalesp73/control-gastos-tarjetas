@@ -92,32 +92,28 @@ async def login(request: Request, username: str = Form(...), password: str = For
 
 @app.post("/guardar")
 async def guardar(
-    request: Request, 
-    fecha: str = Form(...), 
-    tienda: str = Form(...), 
-    monto: str = Form(...),  # Cambiado a str para mayor flexibilidad
+    request: Request,
+    fecha: str = Form(...),
+    tienda: str = Form(...),
+    monto: float = Form(...),
     tarjeta: str = Form(...)
 ):
-    user_session = request.session.get("user")
-    if not user_session:
+    user = request.session.get("user")
+    if not user:
         return RedirectResponse("/login", status_code=303)
 
-    try:
-        # Convertimos el monto a decimal antes de insertar
-        monto_decimal = float(monto.replace(',', ''))
-        
-        supabase.table("movimientos").insert({
-            "fecha": fecha,
-            "tienda": tienda,
-            "monto": monto_decimal,
-            "tarjeta": tarjeta,
-            "usuario": user_session["username"]
-        }).execute()
-        
-        return RedirectResponse("/", status_code=303)
-    except Exception as e:
-        print(f"Error al guardar movimiento: {e}")
-        return RedirectResponse("/?error=Error+en+el+formato+del+monto", status_code=303)
+    # Registro en la base de datos con los nuevos nombres
+    nuevo_movimiento = {
+        "user_id": user["id"],
+        "fecha": fecha,
+        "establecimiento": tienda, # 'tienda' del HTML viaja a 'establecimiento' en Supabase
+        "monto": monto,
+        "tarjeta": tarjeta
+    }
+
+    supabase.table("movimientos").insert(nuevo_movimiento).execute()
+    
+    return RedirectResponse("/", status_code=303)
     
 # --- AQUI PEGUE EL CODIGO QUE SE SUPONE QUE DESPUES DE CREAR UN USUARIO NUEVO REGRESA A LA PAGINA ---
 @app.get("/admin", response_class=HTMLResponse)
