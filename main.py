@@ -102,15 +102,16 @@ async def guardar(
     if not user:
         return RedirectResponse("/login", status_code=303)
 
-    # Registro en la base de datos con los nuevos nombres
+    # Preparamos el dato para Supabase
     nuevo_movimiento = {
         "user_id": user["id"],
         "fecha": fecha,
-        "establecimiento": tienda, # 'tienda' del HTML viaja a 'establecimiento' en Supabase
+        "establecimiento": tienda,
         "monto": monto,
         "tarjeta": tarjeta
     }
 
+    # Guardamos en la tabla
     supabase.table("movimientos").insert(nuevo_movimiento).execute()
     
     return RedirectResponse("/", status_code=303)
