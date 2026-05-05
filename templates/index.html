@@ -32,11 +32,10 @@
             <label>Tarjeta</label>
             <!-- Por ahora es texto, luego será un menú desplegable dinámico -->
             <select name="tarjeta" class="form-control" required>
-                <option value="" disabled selected>Selecciona una tarjeta</option>
-                <option value="BBVA Perla">BBVA Perla</option>
-                <option value="Nu">Nu</option>
-                <option value="Mercado Pago">Mercado Pago</option>
-                <option value="Efectivo">Efectivo</option>
+                    <option value="" disabled selected>Selecciona una tarjeta</option>
+                    {% for tarjeta in tarjetas %}
+                        <option value="{{ tarjeta.nombre_tarjeta }}">{{ tarjeta.nombre_tarjeta }}</option>
+                    {% endfor %}
             </select>
             <button type="submit">Guardar Movimiento</button>
         </form>
