@@ -44,19 +44,23 @@ async def inicio(request: Request):
     if not user:
         return RedirectResponse("/login")
     
-    # Traer movimientos
-    movimientos = supabase.table("movimientos").select("*").eq("usuario_id", user["id"]).order("fecha", desc=True).execute()
+    # 1. Obtenemos los movimientos
+    res_mov = supabase.table("movimientos").select("*").eq("usuario_id", user["id"]).order("fecha", desc=True).execute()
+    datos_movimientos = res_mov.data if res_mov else []
+
+    # 2. Obtenemos las tarjetas
+    res_tar = supabase.table("tarjetas").select("*").eq("usuario_id", user["id"]).execute()
+    datos_tarjetas = res_tar.data if res_tar else []
+
+    # 3. Preparamos el contexto (los datos para el HTML)
+    contexto = {
+        "request": request,
+        "user": user,
+        "movimientos": datos_movimientos,
+        "tarjetas": datos_tarjetas
+    }
     
-    # Traer tarjetas
-    tarjetas_query = supabase.table("tarjetas").select("*").eq("usuario_id", user["id"]).execute()
-    
-    # Enviamos los datos a la plantilla
-    return templates.TemplateResponse("index.html", {
-        "request": request, 
-        "user": user, 
-        "movimientos": movimientos.data,
-        "tarjetas": tarjetas_query.data
-    })
+    return templates.TemplateResponse("index.html", contexto)
     
 @app.get("/login", response_class=HTMLResponse)
 async def login_ui(request: Request, error: str = None):
