@@ -44,7 +44,9 @@ async def home(request: Request):
     if not user:
         return RedirectResponse("/login", status_code=303)
     
-    return templates.TemplateResponse("index.html", {"request": request, "usuario": user["username"]})
+    # Esta es la línea corregida:
+    return templates.TemplateResponse(request=request, name="index.html", context={"usuario": user["username"]})
+    
 @app.get("/login", response_class=HTMLResponse)
 async def login_ui(request: Request, error: str = None):
     # Si recibimos un error en la URL, lo mostramos en un div rojo
