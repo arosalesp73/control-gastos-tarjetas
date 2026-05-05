@@ -102,16 +102,17 @@ async def guardar(
     if not user:
         return RedirectResponse("/login", status_code=303)
 
-    # Corregimos 'establecimiento' por 'concepto' para que coincida con Supabase
+    # Preparamos los datos usando los nombres EXACTOS de tu imagen
     nuevo_movimiento = {
-        "user_id": user["id"],
+        "usuario_id": user["id"],  # Cambiado de user_id a usuario_id
         "fecha": fecha,
-        "concepto": tienda, # 'tienda' es lo que escribes, 'concepto' es la columna en la BD
+        "concepto": tienda,
         "monto": monto,
-        "tarjeta": tarjeta
+        "tarjeta": tarjeta,
+        "tipo": "gasto"            # Agregamos esta columna que pide tu tabla
     }
 
-    # Intentamos guardar
+    # Guardamos en la tabla movimientos
     supabase.table("movimientos").insert(nuevo_movimiento).execute()
     
     return RedirectResponse("/", status_code=303)
