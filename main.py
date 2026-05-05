@@ -44,17 +44,18 @@ async def inicio(request: Request):
     if not user:
         return RedirectResponse("/login")
     
-    # 1. Traer los movimientos (lo que ya tenías)
+    # Traer movimientos
     movimientos = supabase.table("movimientos").select("*").eq("usuario_id", user["id"]).order("fecha", desc=True).execute()
     
-    # 2. Traer las tarjetas que diste de alta en Supabase
-    tarjetas = supabase.table("tarjetas").select("*").eq("usuario_id", user["id"]).execute()
+    # Traer tarjetas
+    tarjetas_query = supabase.table("tarjetas").select("*").eq("usuario_id", user["id"]).execute()
     
+    # Enviamos los datos a la plantilla
     return templates.TemplateResponse("index.html", {
         "request": request, 
         "user": user, 
         "movimientos": movimientos.data,
-        "tarjetas": tarjetas.data  # Enviamos las tarjetas a la página
+        "tarjetas": tarjetas_query.data
     })
     
 @app.get("/login", response_class=HTMLResponse)
