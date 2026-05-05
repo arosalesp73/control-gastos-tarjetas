@@ -39,82 +39,12 @@ DARK_CSS = """
 """
 
 @app.get("/", response_class=HTMLResponse)
-async def index(request: Request):
+async def home(request: Request):
     user = request.session.get("user")
-    if not user: return RedirectResponse("/login")
+    if not user:
+        return RedirectResponse("/login", status_code=303)
     
-    is_admin = user.get("role") == "admin"
-    admin_btn = '<a class="nav-link" onclick="tab(\'admin\')">Panel Admin</a>' if is_admin else ""
-
-    return f"""
-    <html>
-    <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-        <style>{DARK_CSS}</style>
-    </head>
-    <body>
-        <div class="nav-custom">
-            <a id="link-reg" class="nav-link active" onclick="tab('reg')">Registro</a>
-            <a id="link-rep" class="nav-link" onclick="tab('rep')">Reportes</a>
-            {admin_btn}
-            <a class="nav-link" href="/logout" style="color:var(--danger)">Salir</a>
-        </div>
-
-        <div class="container">
-            <div id="reg" class="content">
-                <div class="card">
-                    <h3>Hola, {user['username']}</h3>
-                    <form action="/guardar" method="post">
-                        <label>Tipo de movimiento:</label>
-                        <select name="tipo" class="form-control">
-                            <option value="compra">Compra (Resta saldo -)</option>
-                            <option value="abono">Abono (Suma saldo +)</option>
-                        </select>
-                        <input type="text" name="concepto" placeholder="Concepto" class="form-control" required>
-                        <input type="number" step="0.01" name="monto" placeholder="Monto" class="form-control" required>
-                        <input type="date" name="fecha" class="form-control" value="{datetime.now().strftime('%Y-%m-%d')}">
-                        <button class="btn-main">Guardar Movimiento</button>
-                    </form>
-                </div>
-            </div>
-
-            <div id="rep" class="content" style="display:none">
-                <div class="card">
-                    <h3>Descargar Excel</h3>
-                    <form action="/descargar" method="get">
-                        <label>Desde:</label>
-                        <input type="date" name="inicio" class="form-control" required>
-                        <label>Hasta:</label>
-                        <input type="date" name="fin" class="form-control" required>
-                        <button class="btn-main" style="background:var(--success)">Generar Reporte</button>
-                    </form>
-                </div>
-            </div>
-
-            <div id="admin" class="content" style="display:none">
-                <div class="card">
-                    <h3>Gestión de Usuarios</h3>
-                    <form action="/admin/crear" method="post">
-                        <input type="text" name="new_user" placeholder="Nuevo Usuario" class="form-control" required>
-                        <input type="password" name="new_pass" placeholder="Contraseña" class="form-control" required>
-                        <button class="btn-main">Crear Cuenta Familiar</button>
-                    </form>
-                </div>
-            </div>
-        </div>
-
-        <script>
-            function tab(id) {{
-                document.querySelectorAll('.content').forEach(c => c.style.display = 'none');
-                document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
-                document.getElementById(id).style.display = 'block';
-                document.getElementById('link-' + id.substring(0,3)).classList.add('active');
-            }}
-        </script>
-    </body>
-    </html>
-    """
-
+    return templates.TemplateResponse("index.html", {"request": request, "usuario": user["username"]})
 @app.get("/login", response_class=HTMLResponse)
 async def login_ui(request: Request, error: str = None):
     # Si recibimos un error en la URL, lo mostramos en un div rojo
