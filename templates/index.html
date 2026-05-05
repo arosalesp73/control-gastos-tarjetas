@@ -40,12 +40,19 @@
     <a href="/logout" class="logout">Cerrar Sesión</a>
 
     <script>
-       // Pone la fecha de hoy por defecto y bloquea el futuro
-       const hoy = new Date().toISOString().split("T")[0];
-       const inputFecha = document.getElementById('fecha_input');
+    // 1. Obtener la fecha actual ajustada a tu zona horaria (Colima)
+    const hoyLocal = new Date();
+    const offset = hoyLocal.getTimezoneOffset() * 60000;
+    const fechaAjustada = new Date(hoyLocal - offset).toISOString().split("T")[0];
+
+    // 2. Localizar el calendario por su ID
+    const inputFecha = document.getElementById('fecha_input');
     
-       inputFecha.value = hoy; // Fecha actual por defecto
-       inputFecha.max = hoy;   // Bloquea cualquier fecha posterior a hoy
-    </script>
+    // 3. Aplicar las restricciones
+    if (inputFecha) {
+        inputFecha.value = fechaAjustada; // Pone la fecha de hoy automáticamente
+        inputFecha.max = fechaAjustada;   // Bloquea cualquier día a partir de mañana
+    }
+</script>
 </body>
 </html>
