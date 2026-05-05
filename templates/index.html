@@ -40,8 +40,12 @@
     <a href="/logout" class="logout">Cerrar Sesión</a>
 
     <script>
-        // Pone la fecha de hoy por defecto
-        document.getElementById('fecha_input').valueAsDate = new Date();
+       // Pone la fecha de hoy por defecto y bloquea el futuro
+       const hoy = new Date().toISOString().split("T")[0];
+       const inputFecha = document.getElementById('fecha_input');
+    
+       inputFecha.value = hoy; // Fecha actual por defecto
+       inputFecha.max = hoy;   // Bloquea cualquier fecha posterior a hoy
     </script>
 </body>
 </html>
