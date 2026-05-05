@@ -1,13 +1,15 @@
 import io
 import os
+import pandas as pd
 from datetime import datetime
 from fastapi import FastAPI, Form, Request, HTTPException, Depends
 from fastapi.responses import HTMLResponse, StreamingResponse, RedirectResponse
+from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
-import pandas as pd
 from supabase import create_client, Client
 
 app = FastAPI()
+templates = Jinja2Templates(directory="templates")
 # Usa la variable que configuramos en Render
 app.add_middleware(SessionMiddleware, secret_key=os.environ.get("SESSION_SECRET", "clave-secreta-default"))
 
