@@ -1,8 +1,8 @@
 fastapi
 uvicorn
-pandas
-openpyxl
-supabase
+jinja2
 python-multipart
+supabase
+pandas
 starlette
 itsdangerous
