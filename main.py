@@ -38,14 +38,24 @@ DARK_CSS = """
     .btn-main { background: var(--accent); color: white; border: none; width: 100%; padding: 15px; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 16px; }
 """
 
-@app.get("/", response_class=HTMLResponse)
-async def home(request: Request):
+@app.get("/")
+async def inicio(request: Request):
     user = request.session.get("user")
     if not user:
-        return RedirectResponse("/login", status_code=303)
+        return RedirectResponse("/login")
     
-    # Esta es la línea corregida:
-    return templates.TemplateResponse(request=request, name="index.html", context={"usuario": user["username"]})
+    # 1. Traer los movimientos (lo que ya tenías)
+    movimientos = supabase.table("movimientos").select("*").eq("usuario_id", user["id"]).order("fecha", desc=True).execute()
+    
+    # 2. Traer las tarjetas que diste de alta en Supabase
+    tarjetas = supabase.table("tarjetas").select("*").eq("usuario_id", user["id"]).execute()
+    
+    return templates.TemplateResponse("index.html", {
+        "request": request, 
+        "user": user, 
+        "movimientos": movimientos.data,
+        "tarjetas": tarjetas.data  # Enviamos las tarjetas a la página
+    })
     
 @app.get("/login", response_class=HTMLResponse)
 async def login_ui(request: Request, error: str = None):
