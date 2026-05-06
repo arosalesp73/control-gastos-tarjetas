@@ -9,15 +9,20 @@ from starlette.middleware.sessions import SessionMiddleware
 from supabase import create_client, Client
 
 app = FastAPI()
+
+# Middleware de sesión
 app.add_middleware(SessionMiddleware, secret_key=os.environ.get("SESSION_SECRET", "personal-key-123"))
-# Busca la línea donde defines templates y cámbiala por esto:
+
+# Configuración de templates
 templates = Jinja2Templates(directory="templates")
-templates.env.cache = None  # <--- ESTA ES LA LÍNEA MÁGICA
+templates.env.cache = None 
 
-# --- CONEXIÓN SUPABASE ---
-supabase: Client = create_client(os.environ.get("SUPABASE_URL"), os.environ.get("SUPABASE_KEY"))
+# Conexión Supabase
+supabase: Client = create_client(
+    os.environ.get("SUPABASE_URL"), 
+    os.environ.get("SUPABASE_KEY")
+)
 
-# --- DISEÑO ---
 DARK_CSS = ":root { --bg: #0e0e1a; --surface: #181828; --accent: #6c63ff; --text: #e0e0f0; } body { background: var(--bg); color: var(--text); font-family: sans-serif; margin: 0; padding: 20px; }"
 
 @app.get("/", response_class=HTMLResponse)
@@ -27,11 +32,10 @@ async def inicio(request: Request):
         if not user:
             return RedirectResponse(url="/login")
 
-        # Consultas optimizadas
+        # Consultas a Supabase
         tarjetas = supabase.table("tarjetas").select("*").execute().data
         movimientos = supabase.table("movimientos").select("*").order("fecha", desc=True).limit(5).execute().data
 
-        # Renderizado manual (el que salvó el día)
         template = templates.get_template("index.html")
         content = template.render({
             "request": request,
@@ -41,12 +45,10 @@ async def inicio(request: Request):
             "css": DARK_CSS
         })
         return HTMLResponse(content=content)
-
     except Exception as e:
-        # Log de error para diagnóstico rápido
         print(f"Error en inicio: {e}")
         return HTMLResponse(content=f"Error de sistema: {str(e)}", status_code=500)
-    
+
 @app.get("/login", response_class=HTMLResponse)
 async def login_ui(request: Request, error: str = None):
     err = f'<p style="color:red">{error}</p>' if error else ""
@@ -60,12 +62,32 @@ async def login(request: Request, username: str = Form(...), password: str = For
         return RedirectResponse("/", status_code=303)
     return RedirectResponse("/login?error=Error", status_code=303)
 
-@app.post("/guardar")
-async def guardar(request: Request, fecha: str = Form(...), tienda: str = Form(...), monto: float = Form(...), tarjeta: str = Form(...)):
-    user = request.session.get("user")
-    if not user: return RedirectResponse("/login")
-    supabase.table("movimientos").insert({"usuario_id": user["id"], "fecha": fecha, "concepto": tienda, "monto": monto, "tarjeta": tarjeta, "tipo": "gasto"}).execute()
-    return RedirectResponse("/", status_code=303)
+@app.post("/agregar")
+async def agregar_gasto(
+    request: Request, 
+    concepto: str = Form(...), 
+    monto: float = Form(...), 
+    tarjeta_id: str = Form(...)
+):
+    try:
+        user = request.session.get("user")
+        if not user:
+            return RedirectResponse("/login")
+
+        nuevo_movimiento = {
+            "usuario_id": user["id"], # IMPORTANTE: Vinculamos el gasto al usuario actual
+            "concepto": concepto,
+            "monto": monto,
+            "tarjeta_id": tarjeta_id, 
+            "fecha": datetime.now().isoformat() # Usamos formato ISO para evitar líos con DB
+        }
+        
+        supabase.table("movimientos").insert(nuevo_movimiento).execute()
+        return RedirectResponse(url="/", status_code=303)
+        
+    except Exception as e:
+        print(f"Error al agregar: {e}")
+        return HTMLResponse(content=f"Error al guardar: {str(e)}", status_code=500)
 
 @app.get("/logout")
 async def logout(request: Request):
