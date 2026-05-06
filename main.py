@@ -115,3 +115,28 @@ async def gestionar_usuarios(request: Request):
         }))
     except Exception as e:
         return HTMLResponse(content=f"Error al cargar usuarios: {str(e)}", status_code=500)
+
+@app.post("/admin/crear_usuario")
+async def crear_usuario(
+    request: Request,
+    nuevo_username: str = Form(...),
+    nuevo_email: str = Form(...),
+    nuevo_password: str = Form(...),
+    nuevo_role: str = Form(...)
+):
+    try:
+        user = request.session.get("user")
+        if not user or user.get("role") != 'admin':
+            return RedirectResponse(url="/", status_code=303)
+
+        # Insertamos el nuevo usuario en la tabla de Supabase
+        supabase.table("usuarios").insert({
+            "username": nuevo_username,
+            "email": nuevo_email,
+            "password": nuevo_password, # Nota: En el futuro deberíamos encriptarla
+            "role": nuevo_role
+        }).execute()
+
+        return RedirectResponse(url="/admin/usuarios", status_code=303)
+    except Exception as e:
+        return HTMLResponse(content=f"Error al crear usuario: {str(e)}", status_code=500)
