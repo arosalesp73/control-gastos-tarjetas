@@ -9,11 +9,17 @@
         .container { max-width: 800px; margin: 0 auto; padding: 20px; }
         .nav-bar { display: flex; gap: 20px; margin-bottom: 30px; padding: 15px; border-bottom: 1px solid #333; }
         .nav-link { color: #e0e0f0; text-decoration: none; }
-        table { width: 100%; border-collapse: collapse; background: var(--surface); border-radius: 12px; overflow: hidden; }
+        table { width: 100%; border-collapse: collapse; background: var(--surface); border-radius: 12px; overflow: hidden; margin-bottom: 30px; }
         th, td { padding: 15px; text-align: left; border-bottom: 1px solid #333; }
         th { background: #1a1a2e; color: #666; font-size: 0.9em; }
         .role-badge { background: #333; padding: 4px 8px; border-radius: 4px; font-size: 0.8em; }
         .admin-badge { background: #6c63ff; color: white; }
+        .form-card { background: #1a1a2e; padding: 25px; border-radius: 12px; border: 1px solid #333; }
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .form-group { margin-bottom: 10px; }
+        input, select, button { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #444; background: #0f0f1a; color: white; margin-top: 5px; box-sizing: border-box; }
+        button { background: #6c63ff; border: none; font-weight: bold; cursor: pointer; margin-top: 15px; }
+        button:hover { background: #5a52d5; }
     </style>
 </head>
 <body>
@@ -47,8 +53,30 @@
             </tbody>
         </table>
 
-        <div style="margin-top: 30px;">
-            <p style="color: #666; font-style: italic;">Próximamente: Botón para dar de alta nuevos usuarios.</p>
+        <div class="form-card">
+            <h2 style="margin-top: 0;">➕ Dar de Alta Nuevo Usuario</h2>
+            <form action="/admin/crear_usuario" method="post" class="form-grid">
+                <div class="form-group">
+                    <label>Nombre de Usuario:</label>
+                    <input type="text" name="nuevo_username" placeholder="Ej. alfredo_m" required>
+                </div>
+                <div class="form-group">
+                    <label>Correo Electrónico:</label>
+                    <input type="email" name="nuevo_email" placeholder="correo@ejemplo.com" required>
+                </div>
+                <div class="form-group">
+                    <label>Contraseña Temporal:</label>
+                    <input type="password" name="nuevo_password" required>
+                </div>
+                <div class="form-group">
+                    <label>Rol del Sistema:</label>
+                    <select name="nuevo_role">
+                        <option value="usuario">Usuario Estándar</option>
+                        <option value="admin">Administrador</option>
+                    </select>
+                </div>
+                <button type="submit" style="grid-column: span 2;">Registrar Usuario</button>
+            </form>
         </div>
     </div>
 </body>
