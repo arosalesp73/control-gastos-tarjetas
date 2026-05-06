@@ -20,7 +20,13 @@ DARK_CSS = ":root { --bg: #0e0e1a; --surface: #181828; --accent: #6c63ff; --text
 
 @app.get("/", response_class=HTMLResponse)
 async def inicio(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
+    try:
+        # Cargamos el archivo manualmente sin usar el buscador de Jinja2
+        with open("templates/index.html", "r") as f:
+            contenido = f.read()
+        return HTMLResponse(content=contenido)
+    except Exception as e:
+        return HTMLResponse(content=f"Error de lectura manual: {str(e)}")
 
 @app.get("/login", response_class=HTMLResponse)
 async def login_ui(request: Request, error: str = None):
