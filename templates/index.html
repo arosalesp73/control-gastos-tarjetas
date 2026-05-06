@@ -1,52 +1,27 @@
 <!DOCTYPE html>
-<html lang="es">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Control de Gastos</title>
-    <style>
-        body { background-color: #121212; color: #e0e0e0; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; padding: 20px; }
-        .card { background: #1e1e1e; padding: 20px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); width: 100%; max-width: 400px; }
-        h2 { color: #bb86fc; text-align: center; }
-        input, select, button { width: 100%; padding: 12px; margin: 10px 0; border-radius: 5px; border: none; box-sizing: border-box; }
-        input, select { background: #2c2c2c; color: white; border: 1px solid #333; }
-        button { background: #03dac6; color: #000; font-weight: bold; cursor: pointer; }
-        .logout { margin-top: 20px; color: #cf6679; text-decoration: none; font-size: 0.9em; }
-    </style>
 </head>
 <body>
-    <div class="card">
-        <h2>Registrar Movimiento</h2>
-        <form action="/guardar" method="post">
-            <label>Fecha</label>
-            <input type="date" name="fecha" id="fecha_input" required>
+    <h1>Bienvenido, {{ user.username if user else 'Usuario' }}</h1>
+    
+    <h3>Tus Tarjetas</h3>
+    <ul>
+        {% for t in tarjetas %}
+            <li>{{ t.nombre_tarjeta }}</li>
+        {% else %}
+            <li>No hay tarjetas registradas.</li>
+        {% endfor %}
+    </ul>
 
-            <label>Establecimiento / Tienda</label>
-            <input type="text" name="tienda" placeholder="Ej. Walmart" required>
-
-            <label>Monto</label>
-            <input type="number" step="0.01" name="monto" placeholder="0.00" required>
-
-            <label>Tarjeta</label>
-            <select name="tarjeta" required>
-                <option value="" disabled selected>Selecciona una tarjeta</option>
-                {% if tarjetas %}
-                    {% for t in tarjetas %}
-                        <option value="{{ t.nombre_tarjeta }}">{{ t.nombre_tarjeta }}</option>
-                    {% endfor %}
-                {% endif %}
-            </select>
-            <button type="submit">Guardar Movimiento</button>
-        </form>
-    </div>
-    <a href="/logout" class="logout">Cerrar Sesión</a>
-
-    <script>
-        const hoy = new Date();
-        const offset = hoy.getTimezoneOffset() * 60000;
-        const fechaStr = new Date(hoy - offset).toISOString().split("T")[0];
-        const el = document.getElementById('fecha_input');
-        if (el) { el.value = fechaStr; el.max = fechaStr; }
-    </script>
+    <h3>Últimos Movimientos</h3>
+    <ul>
+        {% for m in movimientos %}
+            <li>{{ m.concepto }} - ${{ m.cantidad }}</li>
+        {% else %}
+            <li>No hay movimientos.</li>
+        {% endfor %}
+    </ul>
 </body>
 </html>
