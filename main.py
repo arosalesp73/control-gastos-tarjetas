@@ -10,7 +10,9 @@ from supabase import create_client, Client
 
 app = FastAPI()
 app.add_middleware(SessionMiddleware, secret_key=os.environ.get("SESSION_SECRET", "personal-key-123"))
-templates = Jinja2Templates(directory=os.path.join(os.getcwd(), "templates"))
+# Busca la línea donde defines templates y cámbiala por esto:
+templates = Jinja2Templates(directory="templates")
+templates.env.cache = None  # <--- ESTA ES LA LÍNEA MÁGICA
 
 # --- CONEXIÓN SUPABASE ---
 supabase: Client = create_client(os.environ.get("SUPABASE_URL"), os.environ.get("SUPABASE_KEY"))
@@ -20,18 +22,9 @@ DARK_CSS = ":root { --bg: #0e0e1a; --surface: #181828; --accent: #6c63ff; --text
 
 @app.get("/", response_class=HTMLResponse)
 async def inicio(request: Request):
-    try:
-        # 1. Intentamos leer el archivo directamente desde la carpeta
-        ruta_archivo = os.path.join(os.getcwd(), "templates", "index.html")
-        with open(ruta_archivo, "r", encoding="utf-8") as f:
-            contenido = f.read()
-        
-        # 2. Lo enviamos como texto plano (ignora las etiquetas {{ }} por ahora)
-        return HTMLResponse(content=contenido)
-    except Exception as e:
-        # 3. Si falla aquí, sabremos que Render no encuentra el archivo
-        return HTMLResponse(content=f"Error de lectura física: {str(e)}", status_code=500)
-
+    user = request.session.get("user")
+    return templates.TemplateResponse("index.html", {"request": request, "user": user})
+    
 @app.get("/login", response_class=HTMLResponse)
 async def login_ui(request: Request, error: str = None):
     err = f'<p style="color:red">{error}</p>' if error else ""
