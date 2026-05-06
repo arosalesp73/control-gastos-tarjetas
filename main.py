@@ -18,27 +18,30 @@ supabase: Client = create_client(os.environ.get("SUPABASE_URL"), os.environ.get(
 # --- DISEÑO ---
 DARK_CSS = ":root { --bg: #0e0e1a; --surface: #181828; --accent: #6c63ff; --text: #e0e0f0; } body { background: var(--bg); color: var(--text); font-family: sans-serif; margin: 0; padding: 20px; }"
 
-@app.get("/")
+@app.get("/", response_class=HTMLResponse)
 async def inicio(request: Request):
     user = request.session.get("user")
     if not user:
         return RedirectResponse("/login")
     
-    # 1. Consultas a Supabase
-    m_res = supabase.table("movimientos").select("*").eq("usuario_id", user["id"]).order("fecha", desc=True).execute()
-    t_res = supabase.table("tarjetas").select("*").eq("usuario_id", user["id"]).execute()
+    try:
+        # Consultas a Supabase
+        m_res = supabase.table("movimientos").select("*").eq("usuario_id", user["id"]).order("fecha", desc=True).execute()
+        t_res = supabase.table("tarjetas").select("*").eq("usuario_id", user["id"]).execute()
 
-    # 2. Preparación de datos (limpieza de listas)
-    movs = m_res.data if m_res.data else []
-    tarjs = t_res.data if t_res.data else []
-
-    # 3. Renderizado de plantilla (forma estándar y segura)
-    return templates.TemplateResponse("index.html", {
-        "request": request, 
-        "user": user, 
-        "movimientos": movs, 
-        "tarjetas": tarjs
-    })
+        # Enviamos los datos con nombres de argumento explícitos (name y context)
+        # Esto evita el TypeError: unhashable type: 'dict'
+        return templates.TemplateResponse(
+            name="index.html", 
+            context={
+                "request": request,
+                "user": user,
+                "movimientos": m_res.data if m_res.data else [],
+                "tarjetas": t_res.data if t_res.data else []
+            }
+        )
+    except Exception as e:
+        return HTMLResponse(content=f"Error en la base de datos o plantilla: {str(e)}", status_code=500)
     
 @app.get("/login", response_class=HTMLResponse)
 async def login_ui(request: Request, error: str = None):
