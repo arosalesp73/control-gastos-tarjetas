@@ -20,21 +20,11 @@ DARK_CSS = ":root { --bg: #0e0e1a; --surface: #181828; --accent: #6c63ff; --text
 
 @app.get("/", response_class=HTMLResponse)
 async def inicio(request: Request):
-    user = request.session.get("user")
-    if not user:
-        return RedirectResponse("/login")
-    
-    # PRUEBA RADICAL: No le enviaremos datos de la base de datos aún
-    # Solo queremos ver si el HTML carga con listas vacías
+    # Solo vamos a intentar cargar la plantilla sin NINGÚN dato extra
     try:
-        return templates.TemplateResponse("index.html", {
-            "request": request,
-            "user": user,
-            "movimientos": [], # Enviamos lista vacía a propósito
-            "tarjetas": []     # Enviamos lista vacía a propósito
-        })
+        return templates.TemplateResponse("index.html", {"request": request})
     except Exception as e:
-        return HTMLResponse(content=f"Error de Plantilla: {str(e)}", status_code=500)
+        return HTMLResponse(content=f"Error crítico: {str(e)}", status_code=500)
     
 @app.get("/login", response_class=HTMLResponse)
 async def login_ui(request: Request, error: str = None):
