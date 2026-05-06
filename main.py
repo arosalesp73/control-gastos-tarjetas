@@ -32,23 +32,22 @@ async def inicio(request: Request):
         if not user:
             return RedirectResponse(url="/login")
 
-        # Consultas a Supabase
-        tarjetas = supabase.table("tarjetas").select("*").execute().data
-        movimientos = supabase.table("movimientos").select("*").order("fecha", desc=True).limit(5).execute().data
+        # Filtramos por usuario_id para hacerlo multiusuario real
+        tarjetas = supabase.table("tarjetas").select("*").eq("usuario_id", user["id"]).execute().data
+        
+        # Consultamos los movimientos del usuario (para cálculos internos, aunque no los listemos todos)
+        movimientos = supabase.table("movimientos").select("*").eq("usuario_id", user["id"]).order("fecha", desc=True).execute().data
 
         template = templates.get_template("index.html")
         content = template.render({
             "request": request,
             "user": user,
             "tarjetas": tarjetas if tarjetas else [],
-            "movimientos": movimientos if movimientos else [],
-            "css": DARK_CSS
+            "css": DARK_CSS # El formato de moneda lo manejaremos en el HTML
         })
         return HTMLResponse(content=content)
     except Exception as e:
-        print(f"Error en inicio: {e}")
-        return HTMLResponse(content=f"Error de sistema: {str(e)}", status_code=500)
-
+        return HTMLResponse(content=f"Error: {str(e)}", status_code=500)
 @app.get("/login", response_class=HTMLResponse)
 async def login_ui(request: Request, error: str = None):
     err = f'<p style="color:red">{error}</p>' if error else ""
