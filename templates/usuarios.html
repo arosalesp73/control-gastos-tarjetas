@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Usuarios</title>
+    <style>
+        {{ css | safe }}
+        .container { max-width: 800px; margin: 0 auto; padding: 20px; }
+        .nav-bar { display: flex; gap: 20px; margin-bottom: 30px; padding: 15px; border-bottom: 1px solid #333; }
+        .nav-link { color: #e0e0f0; text-decoration: none; }
+        table { width: 100%; border-collapse: collapse; background: var(--surface); border-radius: 12px; overflow: hidden; }
+        th, td { padding: 15px; text-align: left; border-bottom: 1px solid #333; }
+        th { background: #1a1a2e; color: #666; font-size: 0.9em; }
+        .role-badge { background: #333; padding: 4px 8px; border-radius: 4px; font-size: 0.8em; }
+        .admin-badge { background: #6c63ff; color: white; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <nav class="nav-bar">
+            <a href="/" class="nav-link">⬅️ Volver al Inicio</a>
+        </nav>
+
+        <h1>Gestión de Usuarios</h1>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th>Usuario</th>
+                    <th>Correo</th>
+                    <th>Rol</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for u in lista_usuarios %}
+                <tr>
+                    <td><strong>{{ u.username }}</strong></td>
+                    <td>{{ u.email }}</td>
+                    <td>
+                        <span class="role-badge {% if u.role == 'admin' %}admin-badge{% endif %}">
+                            {{ u.role }}
+                        </span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <div style="margin-top: 30px;">
+            <p style="color: #666; font-style: italic;">Próximamente: Botón para dar de alta nuevos usuarios.</p>
+        </div>
+    </div>
+</body>
+</html>
