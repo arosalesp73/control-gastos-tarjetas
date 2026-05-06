@@ -62,7 +62,7 @@
                         <label>Tarjeta:</label>
                         <select name="tarjeta_id">
                             {% for t in tarjetas %}
-                            <option value="{{ t.id }}">{{ t.nombre }}</option>
+                                <option value="{{ t.nombre_tarjeta }}">{{ t.nombre_tarjeta }}</option>
                             {% endfor %}
                         </select>
                     </div>
