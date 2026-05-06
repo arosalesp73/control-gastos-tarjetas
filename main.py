@@ -25,22 +25,23 @@ async def inicio(request: Request):
         return RedirectResponse("/login")
     
     try:
-        # Consultas a Supabase
+        # 1. Obtenemos datos de Supabase
         m_res = supabase.table("movimientos").select("*").eq("usuario_id", user["id"]).order("fecha", desc=True).execute()
         t_res = supabase.table("tarjetas").select("*").eq("usuario_id", user["id"]).execute()
 
-        # En algunas versiones, 'request' debe pasarse fuera del diccionario o de forma muy específica
-        return templates.TemplateResponse(
-            "index.html", 
-            {
-                "request": request,  # Aquí se queda para la plantilla
-                "user": user,
-                "movimientos": m_res.data if m_res.data else [],
-                "tarjetas": t_res.data if t_res.data else []
-            }
-        )
+        # 2. Preparamos el contexto de forma explícita
+        contexto = {
+            "request": request,
+            "user": user,
+            "movimientos": m_res.data if m_res.data else [],
+            "tarjetas": t_res.data if t_res.data else []
+        }
+
+        # 3. Retornamos usando la sintaxis de "desempaquetado" (**contexto)
+        # Esto suele corregir el error de 'unhashable type: dict' en Render
+        return templates.TemplateResponse("index.html", contexto)
+
     except Exception as e:
-        # Si esto falla, imprimimos el error real para debuguear
         return HTMLResponse(content=f"Error detectado: {str(e)}", status_code=500)
     
 @app.get("/login", response_class=HTMLResponse)
