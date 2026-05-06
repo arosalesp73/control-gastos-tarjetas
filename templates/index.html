@@ -6,22 +6,24 @@
 <body>
     <h1>Bienvenido, {{ user.username if user else 'Usuario' }}</h1>
     
-    <h3>Tus Tarjetas</h3>
-    <ul>
-        {% for t in tarjetas %}
-            <li>{{ t.nombre_tarjeta }}</li>
-        {% else %}
-            <li>No hay tarjetas registradas.</li>
-        {% endfor %}
-    </ul>
+    <h2>Tus Tarjetas</h2>
+<div class="grid-container">
+    {% for t in tarjetas %}
+    <div class="card">
+        <h3>{{ t.nombre }}</h3>
+        <p>Saldo: ${{ t.saldo }}</p>
+    </div>
+    {% endfor %}
+</div>
 
-    <h3>Últimos Movimientos</h3>
-    <ul>
-        {% for m in movimientos %}
-            <li>{{ m.concepto }} - ${{ m.monto }}</li>
-        {% else %}
-            <li>No hay movimientos.</li>
-        {% endfor %}
-    </ul>
+<h2>Últimos Movimientos</h2>
+<div class="movimientos-container">
+    {% for m in movimientos %}
+    <div class="movimiento-item">
+        <span>{{ m.concepto }}</span>
+        <span class="monto">${{ m.monto }}</span>
+    </div>
+    {% endfor %}
+</div>
 </body>
 </html>
