@@ -21,12 +21,16 @@ DARK_CSS = ":root { --bg: #0e0e1a; --surface: #181828; --accent: #6c63ff; --text
 @app.get("/", response_class=HTMLResponse)
 async def inicio(request: Request):
     try:
-        # Cargamos el archivo manualmente sin usar el buscador de Jinja2
-        with open("templates/index.html", "r") as f:
+        # 1. Intentamos leer el archivo directamente desde la carpeta
+        ruta_archivo = os.path.join(os.getcwd(), "templates", "index.html")
+        with open(ruta_archivo, "r", encoding="utf-8") as f:
             contenido = f.read()
+        
+        # 2. Lo enviamos como texto plano (ignora las etiquetas {{ }} por ahora)
         return HTMLResponse(content=contenido)
     except Exception as e:
-        return HTMLResponse(content=f"Error de lectura manual: {str(e)}")
+        # 3. Si falla aquí, sabremos que Render no encuentra el archivo
+        return HTMLResponse(content=f"Error de lectura física: {str(e)}", status_code=500)
 
 @app.get("/login", response_class=HTMLResponse)
 async def login_ui(request: Request, error: str = None):
