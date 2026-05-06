@@ -67,28 +67,28 @@ async def agregar_gasto(
     request: Request, 
     concepto: str = Form(...), 
     monto: float = Form(...), 
-    tarjeta_id: str = Form(...)
+    tarjeta_id: str = Form(...) # Este valor vendrá del <select>
 ):
     try:
         user = request.session.get("user")
-        if not user:
-            return RedirectResponse("/login")
+        if not user: return RedirectResponse("/login")
 
         nuevo_movimiento = {
-            "usuario_id": user["id"], # IMPORTANTE: Vinculamos el gasto al usuario actual
+            "usuario_id": user["id"],
             "concepto": concepto,
             "monto": monto,
-            "tarjeta_id": tarjeta_id, 
-            "fecha": datetime.now().isoformat() # Usamos formato ISO para evitar líos con DB
+            "tarjeta": tarjeta_id, # En tu tabla es la columna 'tarjeta' (text)
+            "tipo": "gasto",       # Agregamos el tipo que pide tu tabla
+            "fecha": datetime.now().date().isoformat() # Solo la fecha como pide tu campo 'date'
         }
         
         supabase.table("movimientos").insert(nuevo_movimiento).execute()
         return RedirectResponse(url="/", status_code=303)
         
     except Exception as e:
-        print(f"Error al agregar: {e}")
-        return HTMLResponse(content=f"Error al guardar: {str(e)}", status_code=500)
-
+        print(f"Error: {e}")
+        return HTMLResponse(content=f"Error: {str(e)}", status_code=500)
+        
 @app.get("/logout")
 async def logout(request: Request):
     request.session.clear()
