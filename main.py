@@ -9,8 +9,10 @@ from starlette.middleware.sessions import SessionMiddleware
 from supabase import create_client, Client
 
 app = FastAPI()
+# Configuración de carpetas
 templates = Jinja2Templates(directory="templates")
-# Usa la variable que configuramos en Render
+
+# Middleware de sesión
 app.add_middleware(SessionMiddleware, secret_key=os.environ.get("SESSION_SECRET", "clave-secreta-default"))
 
 # --- CONEXIÓN SUPABASE ---
@@ -29,9 +31,6 @@ def get_current_user(request: Request):
 DARK_CSS = """
     :root { --bg: #0e0e1a; --surface: #181828; --accent: #6c63ff; --text: #e0e0f0; --danger: #ff6b6b; --success: #56cf86; }
     body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; margin: 0; padding-bottom: 30px; }
-    .nav-custom { background: var(--surface); display: flex; overflow-x: auto; padding: 10px; border-bottom: 1px solid #2a2a45; sticky: top; }
-    .nav-link { color: #8080a8; text-decoration: none; padding: 10px; font-size: 0.9rem; white-space: nowrap; cursor: pointer; }
-    .nav-link.active { color: var(--accent); font-weight: bold; border-bottom: 2px solid var(--accent); }
     .container { max-width: 500px; margin: auto; padding: 20px; }
     .card { background: var(--surface); border-radius: 15px; padding: 20px; border: 1px solid #2a2a45; margin-bottom: 20px; }
     .form-control { background: #1f1f33; border: 1px solid #2a2a45; color: white; width: 100%; padding: 12px; border-radius: 10px; margin-bottom: 15px; box-sizing: border-box; font-size: 16px; }
@@ -48,21 +47,20 @@ async def inicio(request: Request):
     res_mov = supabase.table("movimientos").select("*").eq("usuario_id", user["id"]).order("fecha", desc=True).execute()
     res_tar = supabase.table("tarjetas").select("*").eq("usuario_id", user["id"]).execute()
 
-    # Definimos los datos
-    movimientos = res_mov.data if res_mov else []
-    tarjetas = res_tar.data if res_tar else []
+    # Preparamos los datos
+    movimientos = res_mov.data if res_mov.data else []
+    tarjetas = res_tar.data if res_tar.data else []
 
-    # Enviamos los datos directamente sin crear una variable intermedia 'contexto'
-    return templates.TemplateResponse(
-        name="index.html", 
-        context={"request": request, "user": user, "movimientos": movimientos, "tarjetas": tarjetas}
-    )
-    
+    return templates.TemplateResponse("index.html", {
+        "request": request, 
+        "user": user, 
+        "movimientos": movimientos, 
+        "tarjetas": tarjetas
+    })
+
 @app.get("/login", response_class=HTMLResponse)
 async def login_ui(request: Request, error: str = None):
-    # Si recibimos un error en la URL, lo mostramos en un div rojo
     error_html = f'<div style="color: #ff4d4d; margin-bottom: 15px; text-align: center; font-weight: bold;">{error}</div>' if error else ""
-    
     return f"""
     <html>
     <head>
@@ -86,118 +84,75 @@ async def login_ui(request: Request, error: str = None):
 @app.post("/login")
 async def login(request: Request, username: str = Form(...), password: str = Form(...)):
     try:
-        # Consulta limpia a Supabase
         res = supabase.table("usuarios").select("*").eq("username", username).eq("password", password).execute()
-        
         if res.data and len(res.data) > 0:
             request.session["user"] = res.data[0]
             return RedirectResponse("/", status_code=303)
         else:
-            # Redirige de vuelta al login con un mensaje de error amigable
             return RedirectResponse("/login?error=Usuario+o+clave+incorrectos", status_code=303)
-            
     except Exception as e:
-        # En caso de error de conexión, también redirige con aviso
-        print(f"Error de sistema: {e}")
-        return RedirectResponse("/login?error=Error+de+conexion+con+el+servidor", status_code=303)
+        return RedirectResponse("/login?error=Error+de+conexion", status_code=303)
 
 @app.post("/guardar")
-async def guardar(
-    request: Request,
-    fecha: str = Form(...),
-    tienda: str = Form(...),
-    monto: float = Form(...),
-    tarjeta: str = Form(...)
-):
+async def guardar(request: Request, fecha: str = Form(...), tienda: str = Form(...), monto: float = Form(...), tarjeta: str = Form(...)):
     user = request.session.get("user")
-    if not user:
-        return RedirectResponse("/login", status_code=303)
+    if not user: return RedirectResponse("/login", status_code=303)
 
-    # Preparamos los datos usando los nombres EXACTOS de tu imagen
     nuevo_movimiento = {
-        "usuario_id": user["id"],  # Cambiado de user_id a usuario_id
+        "usuario_id": user["id"],
         "fecha": fecha,
         "concepto": tienda,
         "monto": monto,
         "tarjeta": tarjeta,
-        "tipo": "gasto"            # Agregamos esta columna que pide tu tabla
+        "tipo": "gasto"
     }
-
-    # Guardamos en la tabla movimientos
     supabase.table("movimientos").insert(nuevo_movimiento).execute()
-    
     return RedirectResponse("/", status_code=303)
-    
-# --- AQUI PEGUE EL CODIGO QUE SE SUPONE QUE DESPUES DE CREAR UN USUARIO NUEVO REGRESA A LA PAGINA ---
+
 @app.get("/admin", response_class=HTMLResponse)
 async def admin_ui(request: Request, msg: str = None, error: str = None):
-    # Verificamos sesión
     user_session = request.session.get("user")
     if not user_session or user_session.get("role") != "admin":
         return RedirectResponse("/login", status_code=303)
 
-    # Preparamos avisos de éxito o error
-    alert = ""
-    if msg:
-        alert = f'<div style="color: #2ecc71; margin-bottom: 15px; text-align: center;">{msg}</div>'
-    if error:
-        alert = f'<div style="color: #e74c3c; margin-bottom: 15px; text-align: center;">{error}</div>'
+    alert = f'<div style="color: #2ecc71; text-align: center;">{msg}</div>' if msg else ""
+    if error: alert = f'<div style="color: #e74c3c; text-align: center;">{error}</div>'
     
     return f"""
     <html>
-    <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <style>{DARK_CSS}</style>
-    </head>
+    <head><meta name="viewport" content="width=device-width, initial-scale=1"><style>{DARK_CSS}</style></head>
     <body class="container">
         <div class="card">
-            <h2 style="text-align:center">Panel de Administración</h2>
+            <h2 style="text-align:center">Admin</h2>
             {alert}
-            <div style="margin-bottom: 20px;">
-                <a href="/" style="color: var(--primary); text-decoration: none;">← Volver al Inicio</a>
-            </div>
-            
-            <form action="/admin/crear" method="post">
-                <h3>Crear Nuevo Usuario</h3>
+            <a href="/" style="color: #6c63ff; text-decoration: none;">← Volver</a>
+            <form action="/admin/crear" method="post" style="margin-top:20px">
                 <input name="new_user" class="form-control" placeholder="Nuevo Usuario" required>
                 <input name="new_pass" type="password" class="form-control" placeholder="Contraseña" required>
-                <button class="btn-main">Registrar Usuario</button>
+                <button class="btn-main">Registrar</button>
             </form>
         </div>
     </body>
     </html>
     """
-    # --- AQUI TERMINA EL CODIGO PARA REGRESAR A LA PAGINA DESPUES DE CREAR UN USUARIO NUEVO ---
+
 @app.post("/admin/crear")
 async def crear_user(request: Request, new_user: str = Form(...), new_pass: str = Form(...)):
-    # Verificamos sesión de admin
     user_session = request.session.get("user")
     if not user_session or user_session.get("role") != "admin":
         return RedirectResponse("/login", status_code=303)
-
     try:
-        # CORRECCIÓN: Quitamos las llaves dobles que causaban el TypeError
-        supabase.table("usuarios").insert({
-            "username": new_user, 
-            "password": new_pass, 
-            "role": "user"
-        }).execute()
-        
-        return RedirectResponse("/admin?msg=Usuario+creado+exitosamente", status_code=303)
-    except Exception as e:
-        print(f"Error al crear usuario: {e}")
-        return RedirectResponse(f"/admin?error=Error+al+crear+usuario", status_code=303)
+        supabase.table("usuarios").insert({"username": new_user, "password": new_pass, "role": "user"}).execute()
+        return RedirectResponse("/admin?msg=Creado", status_code=303)
+    except:
+        return RedirectResponse("/admin?error=Error", status_code=303)
 
 @app.get("/descargar")
 async def descargar(inicio: str, fin: str, user=Depends(get_current_user)):
-    query = supabase.table("movimientos").select("*").eq("usuario_id", user["id"]).gte("fecha", inicio).lte("fecha", fin)
-    res = query.execute()
-    
-    if not res.data:
-        return "No hay datos en ese rango de fechas."
+    res = supabase.table("movimientos").select("*").eq("usuario_id", user["id"]).gte("fecha", inicio).lte("fecha", fin).execute()
+    if not res.data: return "No hay datos."
 
     df = pd.DataFrame(res.data)
-    # Limpiamos columnas innecesarias para el reporte
     df = df.drop(columns=['usuario_id'], errors='ignore')
     
     output = io.BytesIO()
@@ -205,8 +160,12 @@ async def descargar(inicio: str, fin: str, user=Depends(get_current_user)):
         df.to_excel(writer, index=False)
     output.seek(0)
     
-    return StreamingResponse(output, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                             headers={{"Content-Disposition": f"attachment; filename=reporte_{user['username']}_{inicio}.xlsx"}})
+    # CORRECCIÓN AQUÍ: Se eliminaron las llaves dobles {{ }} que causaban el error 500
+    return StreamingResponse(
+        output, 
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename=reporte_{inicio}.xlsx"}
+    )
 
 @app.get("/logout")
 async def logout(request: Request):
