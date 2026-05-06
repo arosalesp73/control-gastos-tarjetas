@@ -18,7 +18,7 @@
     <h3>Últimos Movimientos</h3>
     <ul>
         {% for m in movimientos %}
-            <li>{{ m.concepto }} - ${{ m.cantidad }}</li>
+            <li>{{ m.concepto }} - ${{ m.monto }}</li>
         {% else %}
             <li>No hay movimientos.</li>
         {% endfor %}
