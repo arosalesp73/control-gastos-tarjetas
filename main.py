@@ -94,3 +94,24 @@ async def agregar_gasto(
 async def logout(request: Request):
     request.session.clear()
     return RedirectResponse("/login")
+
+@app.get("/admin/usuarios", response_class=HTMLResponse)
+async def gestionar_usuarios(request: Request):
+    try:
+        user = request.session.get("user")
+        # Seguridad: Si no es admin, lo mandamos al inicio
+        if not user or user.get("role") != 'admin':
+            return RedirectResponse(url="/")
+
+        # Traemos a todos los usuarios de la base de datos
+        todos_los_usuarios = supabase.table("usuarios").select("*").execute().data
+
+        template = templates.get_template("usuarios.html")
+        return HTMLResponse(content=template.render({
+            "request": request,
+            "user": user,
+            "lista_usuarios": todos_los_usuarios,
+            "css": DARK_CSS
+        }))
+    except Exception as e:
+        return HTMLResponse(content=f"Error al cargar usuarios: {str(e)}", status_code=500)
