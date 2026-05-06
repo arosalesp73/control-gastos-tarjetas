@@ -27,25 +27,25 @@ async def inicio(request: Request):
         if not user:
             return RedirectResponse(url="/login")
 
-        # 1. Consultas a Supabase
+        # Consultas optimizadas
         tarjetas = supabase.table("tarjetas").select("*").execute().data
         movimientos = supabase.table("movimientos").select("*").order("fecha", desc=True).limit(5).execute().data
 
-        # 2. Renderizado manual
+        # Renderizado manual (el que salvó el día)
         template = templates.get_template("index.html")
-        
-        # Pasamos el DARK_CSS para que la plantilla lo use
         content = template.render({
             "request": request,
             "user": user,
-            "tarjetas": tarjetas,
-            "movimientos": movimientos,
-            "css": DARK_CSS  # <--- Inyectamos el estilo aquí
+            "tarjetas": tarjetas if tarjetas else [],
+            "movimientos": movimientos if movimientos else [],
+            "css": DARK_CSS
         })
         return HTMLResponse(content=content)
 
     except Exception as e:
-        return HTMLResponse(content=f"Error: {str(e)}", status_code=500)
+        # Log de error para diagnóstico rápido
+        print(f"Error en inicio: {e}")
+        return HTMLResponse(content=f"Error de sistema: {str(e)}", status_code=500)
     
 @app.get("/login", response_class=HTMLResponse)
 async def login_ui(request: Request, error: str = None):
