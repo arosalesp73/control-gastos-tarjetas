@@ -23,14 +23,22 @@ DARK_CSS = ":root { --bg: #0e0e1a; --surface: #181828; --accent: #6c63ff; --text
 @app.get("/", response_class=HTMLResponse)
 async def inicio(request: Request):
     try:
+        # 1. Obtenemos el usuario de la sesión
         user = request.session.get("user")
-        # Cargamos la plantilla manualmente
+        
+        # 2. Cargamos la plantilla de forma independiente
+        # Esto evita que FastAPI confunda el nombre del archivo con el contexto
         template = templates.get_template("index.html")
-        # La renderizamos nosotros mismos
-        content = template.render(request=request, user=user)
+        
+        # 3. Renderizamos manualmente pasando el diccionario de datos
+        content = template.render({"request": request, "user": user})
+        
+        # 4. Retornamos la respuesta HTML pura
         return HTMLResponse(content=content)
+        
     except Exception as e:
-        return HTMLResponse(content=f"Error en renderizado manual: {str(e)}", status_code=500)
+        # Esto nos dirá exactamente qué falla si algo sale mal
+        return HTMLResponse(content=f"Error en renderizado: {str(e)}", status_code=500)
     
 @app.get("/login", response_class=HTMLResponse)
 async def login_ui(request: Request, error: str = None):
