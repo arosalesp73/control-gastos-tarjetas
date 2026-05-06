@@ -21,13 +21,11 @@
     <h2>Tus Tarjetas</h2>
     <div class="grid-container">
         {% for t in tarjetas %}
-        <div class="card">
-            <!-- REVISA AQUÍ: He puesto 'nombre' y 'saldo', cámbialos si en Supabase se llaman distinto -->
-            <h3 style="margin:0">{{ t.nombre }}</h3>
-            <p style="color: var(--accent); font-size: 1.2em;">${{ t.saldo }}</p>
-        </div>
-        {% else %}
-        <p>No hay tarjetas registradas.</p>
+            <div class="card">
+                <h3 style="margin:0">{{ t.nombre_tarjeta }}</h3>
+                <!-- Nota: Tu tabla no tiene columna 'saldo', por ahora lo dejamos estético -->
+                <p style="color: var(--accent); font-size: 1.2em;">Activa</p> 
+            </div>
         {% endfor %}
     </div>
 
