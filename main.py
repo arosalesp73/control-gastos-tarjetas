@@ -120,7 +120,6 @@ async def gestionar_usuarios(request: Request):
 async def crear_usuario(
     request: Request,
     nuevo_username: str = Form(...),
-    nuevo_email: str = Form(...),
     nuevo_password: str = Form(...),
     nuevo_role: str = Form(...)
 ):
@@ -129,14 +128,14 @@ async def crear_usuario(
         if not user or user.get("role") != 'admin':
             return RedirectResponse(url="/", status_code=303)
 
-        # Insertamos el nuevo usuario en la tabla de Supabase
+        # Insertamos el nuevo usuario sin la columna email
         supabase.table("usuarios").insert({
             "username": nuevo_username,
-            "email": nuevo_email,
-            "password": nuevo_password, # Nota: En el futuro deberíamos encriptarla
+            "password": nuevo_password,
             "role": nuevo_role
         }).execute()
 
         return RedirectResponse(url="/admin/usuarios", status_code=303)
     except Exception as e:
+        print(f"Error al crear usuario: {e}")
         return HTMLResponse(content=f"Error al crear usuario: {str(e)}", status_code=500)
