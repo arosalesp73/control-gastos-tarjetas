@@ -29,19 +29,19 @@ async def inicio(request: Request):
         m_res = supabase.table("movimientos").select("*").eq("usuario_id", user["id"]).order("fecha", desc=True).execute()
         t_res = supabase.table("tarjetas").select("*").eq("usuario_id", user["id"]).execute()
 
-        # Enviamos los datos con nombres de argumento explícitos (name y context)
-        # Esto evita el TypeError: unhashable type: 'dict'
+        # En algunas versiones, 'request' debe pasarse fuera del diccionario o de forma muy específica
         return templates.TemplateResponse(
-            name="index.html", 
-            context={
-                "request": request,
+            "index.html", 
+            {
+                "request": request,  # Aquí se queda para la plantilla
                 "user": user,
                 "movimientos": m_res.data if m_res.data else [],
                 "tarjetas": t_res.data if t_res.data else []
             }
         )
     except Exception as e:
-        return HTMLResponse(content=f"Error en la base de datos o plantilla: {str(e)}", status_code=500)
+        # Si esto falla, imprimimos el error real para debuguear
+        return HTMLResponse(content=f"Error detectado: {str(e)}", status_code=500)
     
 @app.get("/login", response_class=HTMLResponse)
 async def login_ui(request: Request, error: str = None):
