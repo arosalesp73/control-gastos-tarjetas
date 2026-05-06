@@ -25,5 +25,32 @@
     </div>
     {% endfor %}
 </div>
+
+<div class="card">
+    <h3>Registrar Nuevo Gasto</h3>
+    <form action="/agregar" method="post">
+        <div style="margin-bottom: 15px;">
+            <label>Concepto:</label>
+            <input type="text" name="concepto" placeholder="Ej. Cena" required style="width: 100%; padding: 8px; border-radius: 5px; border: 1px solid #333; background: #1a1a2e; color: white;">
+        </div>
+        
+        <div style="margin-bottom: 15px;">
+            <label>Monto:</label>
+            <input type="number" name="monto" step="0.01" placeholder="0.00" required style="width: 100%; padding: 8px; border-radius: 5px; border: 1px solid #333; background: #1a1a2e; color: white;">
+        </div>
+
+        <div style="margin-bottom: 15px;">
+            <label>Tarjeta:</label>
+            <select name="tarjeta_id" style="width: 100%; padding: 8px; border-radius: 5px; border: 1px solid #333; background: #1a1a2e; color: white;">
+                {% for t in tarjetas %}
+                <option value="{{ t.id }}">{{ t.nombre }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <button type="submit" style="background: #4e4ed1; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; width: 100%;">Guardar Gasto</button>
+    </form>
+</div>
+    
 </body>
 </html>
