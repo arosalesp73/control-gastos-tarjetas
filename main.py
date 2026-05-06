@@ -24,25 +24,17 @@ async def inicio(request: Request):
     if not user:
         return RedirectResponse("/login")
     
+    # PRUEBA RADICAL: No le enviaremos datos de la base de datos aún
+    # Solo queremos ver si el HTML carga con listas vacías
     try:
-        # 1. Obtenemos datos de Supabase
-        m_res = supabase.table("movimientos").select("*").eq("usuario_id", user["id"]).order("fecha", desc=True).execute()
-        t_res = supabase.table("tarjetas").select("*").eq("usuario_id", user["id"]).execute()
-
-        # 2. Preparamos el contexto de forma explícita
-        contexto = {
+        return templates.TemplateResponse("index.html", {
             "request": request,
             "user": user,
-            "movimientos": m_res.data if m_res.data else [],
-            "tarjetas": t_res.data if t_res.data else []
-        }
-
-        # 3. Retornamos usando la sintaxis de "desempaquetado" (**contexto)
-        # Esto suele corregir el error de 'unhashable type: dict' en Render
-        return templates.TemplateResponse("index.html", contexto)
-
+            "movimientos": [], # Enviamos lista vacía a propósito
+            "tarjetas": []     # Enviamos lista vacía a propósito
+        })
     except Exception as e:
-        return HTMLResponse(content=f"Error detectado: {str(e)}", status_code=500)
+        return HTMLResponse(content=f"Error de Plantilla: {str(e)}", status_code=500)
     
 @app.get("/login", response_class=HTMLResponse)
 async def login_ui(request: Request, error: str = None):
