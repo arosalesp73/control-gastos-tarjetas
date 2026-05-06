@@ -20,12 +20,8 @@ DARK_CSS = ":root { --bg: #0e0e1a; --surface: #181828; --accent: #6c63ff; --text
 
 @app.get("/", response_class=HTMLResponse)
 async def inicio(request: Request):
-    # Solo vamos a intentar cargar la plantilla sin NINGÚN dato extra
-    try:
-        return templates.TemplateResponse("index.html", {"request": request})
-    except Exception as e:
-        return HTMLResponse(content=f"Error crítico: {str(e)}", status_code=500)
-    
+    return templates.TemplateResponse("index.html", {"request": request})
+
 @app.get("/login", response_class=HTMLResponse)
 async def login_ui(request: Request, error: str = None):
     err = f'<p style="color:red">{error}</p>' if error else ""
