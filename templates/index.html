@@ -1,56 +1,77 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
-    <style>{{ css | safe }}</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Control de Gastos</title>
+    <style>
+        {{ css | safe }}
+        /* Estilos adicionales para las Cards */
+        .grid-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .card { background: var(--surface); padding: 20px; border-radius: 12px; border: 1px solid #333; }
+        .movimiento-item { display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid #222; }
+        .form-group { margin-bottom: 15px; }
+        input, select, button { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #333; background: #1a1a2e; color: white; margin-top: 5px; }
+        button { background: var(--accent); cursor: pointer; font-weight: bold; border: none; }
+    </style>
 </head>
 <body>
-    <h1>Bienvenido, {{ user.username if user else 'Usuario' }}</h1>
-    
+    <h1>Bienvenido, {{ user.username }}</h1>
+
     <h2>Tus Tarjetas</h2>
-<div class="grid-container">
-    {% for t in tarjetas %}
-    <div class="card">
-        <h3>{{ t.nombre }}</h3>
-        <p>Saldo: ${{ t.saldo }}</p>
-    </div>
-    {% endfor %}
-</div>
-
-<h2>Últimos Movimientos</h2>
-<div class="movimientos-container">
-    {% for m in movimientos %}
-    <div class="movimiento-item">
-        <span>{{ m.concepto }}</span>
-        <span class="monto">${{ m.monto }}</span>
-    </div>
-    {% endfor %}
-</div>
-
-<div class="card">
-    <h3>Registrar Nuevo Gasto</h3>
-    <form action="/agregar" method="post">
-        <div style="margin-bottom: 15px;">
-            <label>Concepto:</label>
-            <input type="text" name="concepto" placeholder="Ej. Cena" required style="width: 100%; padding: 8px; border-radius: 5px; border: 1px solid #333; background: #1a1a2e; color: white;">
+    <div class="grid-container">
+        {% for t in tarjetas %}
+        <div class="card">
+            <!-- REVISA AQUÍ: He puesto 'nombre' y 'saldo', cámbialos si en Supabase se llaman distinto -->
+            <h3 style="margin:0">{{ t.nombre }}</h3>
+            <p style="color: var(--accent); font-size: 1.2em;">${{ t.saldo }}</p>
         </div>
-        
-        <div style="margin-bottom: 15px;">
-            <label>Monto:</label>
-            <input type="number" name="monto" step="0.01" placeholder="0.00" required style="width: 100%; padding: 8px; border-radius: 5px; border: 1px solid #333; background: #1a1a2e; color: white;">
-        </div>
+        {% else %}
+        <p>No hay tarjetas registradas.</p>
+        {% endfor %}
+    </div>
 
-        <div style="margin-bottom: 15px;">
-            <label>Tarjeta:</label>
-            <select name="tarjeta_id" style="width: 100%; padding: 8px; border-radius: 5px; border: 1px solid #333; background: #1a1a2e; color: white;">
-                {% for t in tarjetas %}
-                <option value="{{ t.id }}">{{ t.nombre }}</option>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
+        <!-- Columna Izquierda: Movimientos -->
+        <section>
+            <h2>Últimos Movimientos</h2>
+            <div class="card">
+                {% for m in movimientos %}
+                <div class="movimiento-item">
+                    <span>{{ m.concepto }}</span>
+                    <strong>${{ m.monto }}</strong>
+                </div>
+                {% else %}
+                <p>No hay movimientos.</p>
                 {% endfor %}
-            </select>
-        </div>
+            </div>
+        </section>
 
-        <button type="submit" style="background: #4e4ed1; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; width: 100%;">Guardar Gasto</button>
-    </form>
-</div>
-    
+        <!-- Columna Derecha: Formulario -->
+        <section>
+            <h2>Registrar Nuevo Gasto</h2>
+            <div class="card">
+                <form action="/agregar" method="post">
+                    <div class="form-group">
+                        <label>Concepto:</label>
+                        <input type="text" name="concepto" placeholder="Ej. Cena" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Monto:</label>
+                        <input type="number" name="monto" step="0.01" placeholder="0.00" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Tarjeta:</label>
+                        <select name="tarjeta_id">
+                            {% for t in tarjetas %}
+                            <option value="{{ t.id }}">{{ t.nombre }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <button type="submit">Guardar Gasto</button>
+                </form>
+            </div>
+        </section>
+    </div>
 </body>
 </html>
