@@ -24,23 +24,8 @@ async def inicio(request: Request):
     if not user:
         return RedirectResponse("/login")
     
-    # Obtenemos los datos de Supabase
-    m_res = supabase.table("movimientos").select("*").eq("usuario_id", user["id"]).order("fecha", desc=True).execute()
-    t_res = supabase.table("tarjetas").select("*").eq("usuario_id", user["id"]).execute()
-
-    # Creamos las listas limpias
-    lista_movimientos = m_res.data if m_res.data else []
-    lista_tarjetas = t_res.data if t_res.data else []
-
-    # PASO CRÍTICO: Usamos una variable simple para el contexto
-    datos_para_plantilla = {
-        "request": request,
-        "user": user,
-        "movimientos": lista_movimientos,
-        "tarjetas": lista_tarjetas
-    }
-
-    return templates.TemplateResponse("index.html", datos_para_plantilla)
+    # Esta prueba ignora index.html y solo muestra un mensaje en pantalla
+    return HTMLResponse(content=f"<h1>Conexión exitosa</h1><p>Usuario: {user['username']} (ID: {user['id']})</p>")
     
 @app.get("/login", response_class=HTMLResponse)
 async def login_ui(request: Request, error: str = None):
