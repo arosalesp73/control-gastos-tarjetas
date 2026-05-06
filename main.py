@@ -28,16 +28,13 @@ async def inicio(request: Request):
     m_res = supabase.table("movimientos").select("*").eq("usuario_id", user["id"]).order("fecha", desc=True).execute()
     t_res = supabase.table("tarjetas").select("*").eq("usuario_id", user["id"]).execute()
 
-    # Pasamos los datos con nombres de argumento explícitos para evitar el TypeError
-    return templates.TemplateResponse(
-        name="index.html",
-        context={
-            "request": request,
-            "user": user,
-            "movimientos": m_res.data if m_res.data else [],
-            "tarjetas": t_res.data if t_res.data else []
-        }
-    )
+    # Cambiamos la forma de enviar el context para evitar el error 500
+    return templates.TemplateResponse("index.html", {
+        "request": request,
+        "user": user,
+        "movimientos": m_res.data if m_res.data else [],
+        "tarjetas": t_res.data if t_res.data else []
+    })
 
 @app.get("/login", response_class=HTMLResponse)
 async def login_ui(request: Request, error: str = None):
