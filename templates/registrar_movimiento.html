@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nuevo Movimiento</title>
+    <style>
+        {{ css | safe }}
+        .container { max-width: 400px; margin: 50px auto; padding: 20px; }
+        .form-card { background: var(--surface); padding: 30px; border-radius: 12px; border: 1px solid #333; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; color: #aaa; font-size: 0.9em; }
+        input, select, button { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #444; background: #0f0f1a; color: white; margin-top: 5px; box-sizing: border-box; }
+        button { background: #6c63ff; border: none; font-weight: bold; cursor: pointer; margin-top: 10px; transition: 0.3s; }
+        button:hover { background: #5a52d5; }
+        .info-tarjeta { background: #1a1a2e; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #6c63ff; }
+        .back-link { display: block; text-align: center; margin-top: 20px; color: #666; text-decoration: none; font-size: 0.9em; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="form-card">
+            <h2 style="margin-top: 0;">📝 Registrar Movimiento</h2>
+            <div class="info-tarjeta">
+                Tarjeta: <strong>{{ nombre_tarjeta }}</strong>
+            </div>
+            
+            <form action="/movimientos/guardar" method="post">
+                <input type="hidden" name="tarjeta_nombre" value="{{ nombre_tarjeta }}">
+                
+                <div class="form-group">
+                    <label>Tipo de Movimiento:</label>
+                    <select name="tipo_movimiento">
+                        <option value="compra">🛍️ Compra / Gasto</option>
+                        <option value="abono">💳 Abono / Pago a TDC</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Concepto:</label>
+                    <input type="text" name="concepto" placeholder="Ej. Supermercado, Gasolina..." required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Monto ($):</label>
+                    <input type="number" step="0.01" name="monto" placeholder="0.00" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Fecha:</label>
+                    <input type="date" name="fecha" id="fecha_input" required>
+                </div>
+                
+                <button type="submit">Guardar Movimiento</button>
+            </form>
+            <a href="/" class="back-link">✖ Cancelar</a>
+        </div>
+    </div>
+
+    <script>
+        // Establecer la fecha de hoy automáticamente
+        document.getElementById('fecha_input').value = new Date().toISOString().split('T')[0];
+    </script>
+</body>
+</html>
