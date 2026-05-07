@@ -49,16 +49,28 @@
                 <div class="form-group">
                     <label>Fecha:</label>
                     <input type="date" name="fecha" id="fecha_input" required 
-                    style="color-scheme: dark; cursor: pointer;">
+                           style="color-scheme: dark; cursor: pointer;">
                 </div>
         
                 <button type="submit">Guardar Movimiento</button>
             </form>
             <a href="/" class="back-link">✖ Cancelar</a>
-        </div> </div> <script>
+        </div> 
+    </div> 
+
+    <script>
+        // Obtenemos la fecha local actual en formato YYYY-MM-DD
         const hoy = new Date();
-        const fechaFormateada = hoy.toISOString().split('T')[0];
-        document.getElementById('fecha_input').value = fechaFormateada;
+        const offset = hoy.getTimezoneOffset() * 60000;
+        const fechaLocal = new Date(hoy - offset).toISOString().split('T')[0];
+        
+        const campoFecha = document.getElementById('fecha_input');
+        
+        // 1. Setea la fecha por defecto (hoy)
+        campoFecha.value = fechaLocal;
+        
+        // 2. Bloquea cualquier fecha futura
+        campoFecha.max = fechaLocal;
     </script>
 </body>
 </html>
