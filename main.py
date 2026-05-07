@@ -167,3 +167,30 @@ async def guardar_tarjeta(request: Request, nombre_tarjeta: str = Form(...)):
         return RedirectResponse(url="/", status_code=303)
     except Exception as e:
         return HTMLResponse(content=f"Error al guardar tarjeta: {str(e)}", status_code=500)
+
+@app.post("/gastos/guardar")
+async def guardar_gasto(
+    request: Request,
+    tarjeta_id: int = Form(...),
+    concepto: str = Form(...),
+    monto: float = Form(...),
+    fecha: str = Form(...)
+):
+    user = request.session.get("user")
+    if not user:
+        return RedirectResponse(url="/login", status_code=303)
+
+    try:
+        # Insertamos el gasto en la tabla 'gastos'
+        supabase.table("gastos").insert({
+            "tarjeta_id": tarjeta_id,
+            "concepto": concepto,
+            "monto": monto,
+            "fecha": fecha,
+            "usuario_id": user["id"]
+        }).execute()
+        
+        return RedirectResponse(url="/", status_code=303)
+    except Exception as e:
+        print(f"Error al guardar gasto: {e}")
+        return HTMLResponse(content=f"Error al registrar gasto: {str(e)}", status_code=500)
