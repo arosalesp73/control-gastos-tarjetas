@@ -171,7 +171,7 @@ async def guardar_tarjeta(request: Request, nombre_tarjeta: str = Form(...)):
 @app.post("/gastos/guardar")
 async def guardar_gasto(
     request: Request,
-    tarjeta_id: int = Form(...),
+    tarjeta_nombre: str = Form(...), # Tu tabla usa el nombre de la tarjeta en texto
     concepto: str = Form(...),
     monto: float = Form(...),
     fecha: str = Form(...)
@@ -181,16 +181,17 @@ async def guardar_gasto(
         return RedirectResponse(url="/login", status_code=303)
 
     try:
-        # Insertamos el gasto en la tabla 'gastos'
-        supabase.table("gastos").insert({
-            "tarjeta_id": tarjeta_id,
+        # Insertamos en tu tabla 'movimientos'
+        supabase.table("movimientos").insert({
+            "tarjeta": tarjeta_nombre,
             "concepto": concepto,
             "monto": monto,
             "fecha": fecha,
-            "usuario_id": user["id"]
+            "usuario_id": user["id"],
+            "tipo": "gasto" # Para diferenciar si luego agregas ingresos
         }).execute()
         
         return RedirectResponse(url="/", status_code=303)
     except Exception as e:
-        print(f"Error al guardar gasto: {e}")
-        return HTMLResponse(content=f"Error al registrar gasto: {str(e)}", status_code=500)
+        print(f"Error al guardar movimiento: {e}")
+        return HTMLResponse(content=f"Error al registrar: {str(e)}", status_code=500)
