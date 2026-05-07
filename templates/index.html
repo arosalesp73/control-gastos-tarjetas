@@ -11,11 +11,14 @@
         .nav-link:hover { color: #6c63ff; }
         .admin-tag { background: #6c63ff; color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.8em; margin-left: 10px; }
         .grid-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 40px; }
-        .card { background: var(--surface); padding: 20px; border-radius: 12px; border: 1px solid #333; }
-        .btn-plus { display: flex; align-items: center; justify-content: center; text-decoration: none; border: 2px dashed #444; background: transparent; color: #666; font-size: 2em; }
-        .form-group { margin-bottom: 15px; }
-        input, select, button { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #333; background: #1a1a2e; color: white; margin-top: 8px; box-sizing: border-box; }
-        button { background: #6c63ff; cursor: pointer; font-weight: bold; border: none; }
+        
+        /* Estilo para que la tarjeta parezca un botón */
+        .card-link { text-decoration: none; color: inherit; display: block; transition: transform 0.2s; }
+        .card-link:hover { transform: translateY(-5px); }
+        
+        .card { background: var(--surface); padding: 25px; border-radius: 12px; border: 1px solid #333; height: 100%; box-sizing: border-box; }
+        .btn-plus { display: flex; align-items: center; justify-content: center; text-decoration: none; border: 2px dashed #444; background: transparent; color: #666; font-size: 2em; min-height: 120px; }
+        .btn-plus:hover { border-color: #6c63ff; color: #6c63ff; }
     </style>
 </head>
 <body>
@@ -33,12 +36,16 @@
     </nav>
 
     <h2>Mis Tarjetas</h2>
+    <p style="color: #666; margin-bottom: 20px;">Selecciona una tarjeta para registrar un movimiento (Compra o Abono):</p>
+    
     <div class="grid-container">
         {% for t in tarjetas %}
-        <div class="card">
-            <h3 style="margin:0; color: #bbb;">{{ t.nombre_tarjeta }}</h3>
-            <p style="color: #666; margin-top: 10px;">Estado: Activa</p>
-        </div>
+        <a href="/movimientos/nuevo/{{ t.nombre_tarjeta }}" class="card-link">
+            <div class="card">
+                <h3 style="margin:0; color: #6c63ff;">{{ t.nombre_tarjeta }}</h3>
+                <p style="color: #666; margin-top: 15px; font-size: 0.9em;">➕ Registrar Movimiento</p>
+            </div>
+        </a>
         {% endfor %}
         
         <a href="/tarjetas/nueva" class="card btn-plus">
@@ -46,29 +53,5 @@
         </a>
     </div>
 
-    <div style="max-width: 500px;">
-        <h2>Registrar Gasto</h2>
-        <div class="card">
-            <form action="/agregar" method="post">
-                <div class="form-group">
-                    <label>Concepto:</label>
-                    <input type="text" name="concepto" required>
-                </div>
-                <div class="form-group">
-                    <label>Monto:</label>
-                    <input type="number" name="monto" step="0.01" placeholder="0.00" required>
-                </div>
-                <div class="form-group">
-                    <label>Tarjeta:</label>
-                    <select name="tarjeta_id">
-                        {% for t in tarjetas %}
-                        <option value="{{ t.nombre_tarjeta }}">{{ t.nombre_tarjeta }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <button type="submit">Guardar Movimiento</button>
-            </form>
-        </div>
-    </div>
 </body>
 </html>
