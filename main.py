@@ -25,6 +25,8 @@ supabase: Client = create_client(
 
 DARK_CSS = ":root { --bg: #0e0e1a; --surface: #181828; --accent: #6c63ff; --text: #e0e0f0; } body { background: var(--bg); color: var(--text); font-family: sans-serif; margin: 0; padding: 20px; }"
 
+# --- RUTAS DE NAVEGACIÓN PRINCIPAL ---
+
 @app.get("/", response_class=HTMLResponse)
 async def inicio(request: Request):
     try:
@@ -32,23 +34,24 @@ async def inicio(request: Request):
         if not user:
             return RedirectResponse(url="/login")
 
-        # FILTRO DE PRIVACIDAD: Solo traemos las tarjetas que pertenecen al usuario logueado
+        # FILTRO DE PRIVACIDAD: Solo traemos las tarjetas del usuario logueado
         tarjetas = supabase.table("tarjetas")\
             .select("*")\
             .eq("usuario_id", user["id"])\
             .execute().data
         
         template = templates.get_template("index.html")
-        content = template.render({
+        return HTMLResponse(content=template.render({
             "request": request,
             "user": user,
             "tarjetas": tarjetas if tarjetas else [],
             "css": DARK_CSS
-        })
-        return HTMLResponse(content=content)
+        }))
     except Exception as e:
         print(f"Error en inicio: {e}")
         return HTMLResponse(content=f"Error de sistema: {str(e)}", status_code=500)
+
+# --- SISTEMA DE AUTENTICACIÓN ---
 
 @app.get("/login", response_class=HTMLResponse)
 async def login_ui(request: Request, error: str = None):
@@ -63,47 +66,89 @@ async def login(request: Request, username: str = Form(...), password: str = For
         return RedirectResponse("/", status_code=303)
     return RedirectResponse("/login?error=Error", status_code=303)
 
-@app.post("/agregar")
-async def agregar_gasto(
-    request: Request, 
-    concepto: str = Form(...), 
-    monto: float = Form(...), 
-    tarjeta_id: str = Form(...) # Este valor vendrá del <select>
-):
-    try:
-        user = request.session.get("user")
-        if not user: return RedirectResponse("/login")
-
-        nuevo_movimiento = {
-            "usuario_id": user["id"],
-            "concepto": concepto,
-            "monto": monto,
-            "tarjeta": tarjeta_id, # En tu tabla es la columna 'tarjeta' (text)
-            "tipo": "gasto",       # Agregamos el tipo que pide tu tabla
-            "fecha": datetime.now().date().isoformat() # Solo la fecha como pide tu campo 'date'
-        }
-        
-        supabase.table("movimientos").insert(nuevo_movimiento).execute()
-        return RedirectResponse(url="/", status_code=303)
-        
-    except Exception as e:
-        print(f"Error: {e}")
-        return HTMLResponse(content=f"Error: {str(e)}", status_code=500)
-        
 @app.get("/logout")
 async def logout(request: Request):
     request.session.clear()
     return RedirectResponse("/login")
 
+# --- GESTIÓN DE TARJETAS ---
+
+@app.get("/tarjetas/nueva", response_class=HTMLResponse)
+async def formulario_tarjeta(request: Request):
+    user = request.session.get("user")
+    if not user: return RedirectResponse(url="/login")
+    
+    template = templates.get_template("nueva_tarjeta.html")
+    return HTMLResponse(content=template.render({"request": request, "user": user, "css": DARK_CSS}))
+
+@app.post("/tarjetas/guardar")
+async def guardar_tarjeta(request: Request, nombre_tarjeta: str = Form(...)):
+    user = request.session.get("user")
+    if not user: return RedirectResponse(url="/login")
+
+    try:
+        supabase.table("tarjetas").insert({
+            "nombre_tarjeta": nombre_tarjeta,
+            "usuario_id": user["id"]
+        }).execute()
+        return RedirectResponse(url="/", status_code=303)
+    except Exception as e:
+        return HTMLResponse(content=f"Error al guardar tarjeta: {str(e)}", status_code=500)
+
+# --- GESTIÓN DE MOVIMIENTOS (COMPRAS Y ABONOS) ---
+
+@app.get("/movimientos/nuevo/{nombre_tarjeta}", response_class=HTMLResponse)
+async def formulario_movimiento(request: Request, nombre_tarjeta: str):
+    user = request.session.get("user")
+    if not user: return RedirectResponse(url="/login")
+    
+    template = templates.get_template("registrar_movimiento.html")
+    return HTMLResponse(content=template.render({
+        "request": request, 
+        "user": user, 
+        "nombre_tarjeta": nombre_tarjeta,
+        "css": DARK_CSS
+    }))
+
+@app.post("/movimientos/guardar")
+async def guardar_movimiento(
+    request: Request,
+    tarjeta_nombre: str = Form(...),
+    concepto: str = Form(...),
+    monto: float = Form(...),
+    tipo_movimiento: str = Form(...), # 'compra' o 'abono'
+    fecha: str = Form(...)
+):
+    user = request.session.get("user")
+    if not user: return RedirectResponse(url="/login", status_code=303)
+
+    # LÓGICA DE NEGATIVOS: Si es abono a la TDC, el monto se guarda negativo
+    monto_final = monto * -1 if tipo_movimiento == 'abono' else monto
+
+    try:
+        supabase.table("movimientos").insert({
+            "tarjeta": tarjeta_nombre,
+            "concepto": concepto,
+            "monto": monto_final,
+            "fecha": fecha,
+            "usuario_id": user["id"],
+            "tipo": tipo_movimiento
+        }).execute()
+        
+        return RedirectResponse(url="/", status_code=303)
+    except Exception as e:
+        print(f"Error al guardar movimiento: {e}")
+        return HTMLResponse(content=f"Error al registrar: {str(e)}", status_code=500)
+
+# --- ADMINISTRACIÓN DE USUARIOS ---
+
 @app.get("/admin/usuarios", response_class=HTMLResponse)
 async def gestionar_usuarios(request: Request):
     try:
         user = request.session.get("user")
-        # Seguridad: Si no es admin, lo mandamos al inicio
         if not user or user.get("role") != 'admin':
             return RedirectResponse(url="/")
 
-        # Traemos a todos los usuarios de la base de datos
         todos_los_usuarios = supabase.table("usuarios").select("*").execute().data
 
         template = templates.get_template("usuarios.html")
@@ -128,7 +173,6 @@ async def crear_usuario(
         if not user or user.get("role") != 'admin':
             return RedirectResponse(url="/", status_code=303)
 
-        # Insertamos el nuevo usuario sin la columna email
         supabase.table("usuarios").insert({
             "username": nuevo_username,
             "password": nuevo_password,
@@ -139,59 +183,3 @@ async def crear_usuario(
     except Exception as e:
         print(f"Error al crear usuario: {e}")
         return HTMLResponse(content=f"Error al crear usuario: {str(e)}", status_code=500)
-
-# 1. Ruta para ver el formulario de nueva tarjeta
-@app.get("/tarjetas/nueva", response_class=HTMLResponse)
-async def formulario_tarjeta(request: Request):
-    user = request.session.get("user")
-    if not user:
-        return RedirectResponse(url="/login")
-    
-    template = templates.get_template("nueva_tarjeta.html")
-    return HTMLResponse(content=template.render({"request": request, "user": user, "css": DARK_CSS}))
-
-# 2. Ruta para procesar el guardado de la tarjeta
-@app.post("/tarjetas/guardar")
-async def guardar_tarjeta(request: Request, nombre_tarjeta: str = Form(...)):
-    user = request.session.get("user")
-    if not user:
-        return RedirectResponse(url="/login")
-
-    try:
-        # Guardamos la tarjeta ligada al ID del usuario actual
-        supabase.table("tarjetas").insert({
-            "nombre_tarjeta": nombre_tarjeta,
-            "usuario_id": user["id"]
-        }).execute()
-        
-        return RedirectResponse(url="/", status_code=303)
-    except Exception as e:
-        return HTMLResponse(content=f"Error al guardar tarjeta: {str(e)}", status_code=500)
-
-@app.post("/gastos/guardar")
-async def guardar_gasto(
-    request: Request,
-    tarjeta_nombre: str = Form(...), # Tu tabla usa el nombre de la tarjeta en texto
-    concepto: str = Form(...),
-    monto: float = Form(...),
-    fecha: str = Form(...)
-):
-    user = request.session.get("user")
-    if not user:
-        return RedirectResponse(url="/login", status_code=303)
-
-    try:
-        # Insertamos en tu tabla 'movimientos'
-        supabase.table("movimientos").insert({
-            "tarjeta": tarjeta_nombre,
-            "concepto": concepto,
-            "monto": monto,
-            "fecha": fecha,
-            "usuario_id": user["id"],
-            "tipo": "gasto" # Para diferenciar si luego agregas ingresos
-        }).execute()
-        
-        return RedirectResponse(url="/", status_code=303)
-    except Exception as e:
-        print(f"Error al guardar movimiento: {e}")
-        return HTMLResponse(content=f"Error al registrar: {str(e)}", status_code=500)
