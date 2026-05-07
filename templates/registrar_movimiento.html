@@ -60,21 +60,25 @@
                 </div>
         
                 <button type="submit">Guardar Movimiento</button>
+                
             </form>
 
-            {% if movimientos %}
             <div class="historial-seccion">
                 <p class="historial-titulo">Últimos registros</p>
-                {% for m in movimientos %}
-                <div class="movimiento-item">
-                    <span class="concepto-texto">{{ m.concepto }}</span>
-                    <span class="{% if m.monto < 0 %}monto-positivo{% else %}monto-negativo{% endif %}">
-                        {{ "$" ~ m.monto }}
-                    </span>
-                </div>
-                {% endfor %}
+                
+                {% if movimientos and movimientos|length > 0 %}
+                    {% for m in movimientos %}
+                    <div class="movimiento-item">
+                        <span class="concepto-texto">{{ m.concepto }}</span>
+                        <span class="{% if m.monto < 0 %}monto-positivo{% else %}monto-negativo{% endif %}">
+                            {{ "$" ~ m.monto }}
+                        </span>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p style="color: #444; font-size: 0.8em; text-align: center;">Sin movimientos recientes</p>
+                {% endif %}
             </div>
-            {% endif %}
 
             <a href="/" class="back-link">✖ Cancelar</a>
         </div> 
