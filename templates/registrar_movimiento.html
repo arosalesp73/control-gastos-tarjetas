@@ -6,21 +6,29 @@
     <title>Nuevo Movimiento</title>
     <style>
         {{ css | safe }}
-        .container { max-width: 400px; margin: 50px auto; padding: 20px; }
-        .form-card { background: var(--surface); padding: 30px; border-radius: 12px; border: 1px solid #333; }
+        .container { max-width: 400px; margin: 30px auto; padding: 20px; }
+        .form-card { background: var(--surface); padding: 25px; border-radius: 12px; border: 1px solid #333; }
         .form-group { margin-bottom: 15px; }
-        label { display: block; margin-bottom: 5px; color: #aaa; font-size: 0.9em; }
+        label { display: block; margin-bottom: 5px; color: #aaa; font-size: 0.85em; }
         input, select, button { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #444; background: #0f0f1a; color: white; margin-top: 5px; box-sizing: border-box; }
-        button { background: #6c63ff; border: none; font-weight: bold; cursor: pointer; margin-top: 10px; transition: 0.3s; }
-        button:hover { background: #5a52d5; }
+        button { background: #6c63ff; border: none; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        
+        /* Estilos para el historial discreto */
+        .historial-seccion { margin-top: 30px; border-top: 1px solid #333; padding-top: 20px; }
+        .historial-titulo { font-size: 0.9em; color: #666; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 1px; }
+        .movimiento-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #222; font-size: 0.85em; }
+        .monto-negativo { color: #ff6b6b; }
+        .monto-positivo { color: #51cf66; }
+        .concepto-texto { color: #bbb; }
+        
         .info-tarjeta { background: #1a1a2e; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #6c63ff; }
-        .back-link { display: block; text-align: center; margin-top: 20px; color: #666; text-decoration: none; font-size: 0.9em; }
+        .back-link { display: block; text-align: center; margin-top: 20px; color: #666; text-decoration: none; font-size: 0.85em; }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="form-card">
-            <h2 style="margin-top: 0;">📝 Registrar Movimiento</h2>
+            <h2 style="margin-top: 0; font-size: 1.4em;">📝 Registrar</h2>
             <div class="info-tarjeta">
                 Tarjeta: <strong>{{ nombre_tarjeta }}</strong>
             </div>
@@ -29,7 +37,7 @@
                 <input type="hidden" name="tarjeta_nombre" value="{{ nombre_tarjeta }}">
                 
                 <div class="form-group">
-                    <label>Tipo de Movimiento:</label>
+                    <label>Tipo:</label>
                     <select name="tipo_movimiento">
                         <option value="compra">🛍️ Compra / Gasto</option>
                         <option value="abono">💳 Abono / Pago a TDC</option>
@@ -38,7 +46,7 @@
 
                 <div class="form-group">
                     <label>Concepto:</label>
-                    <input type="text" name="concepto" placeholder="Ej. Supermercado, Gasolina..." required>
+                    <input type="text" name="concepto" placeholder="¿En qué se gastó?" required>
                 </div>
                 
                 <div class="form-group">
@@ -48,28 +56,36 @@
                 
                 <div class="form-group">
                     <label>Fecha:</label>
-                    <input type="date" name="fecha" id="fecha_input" required 
-                           style="color-scheme: dark; cursor: pointer;">
+                    <input type="date" name="fecha" id="fecha_input" required style="color-scheme: dark;">
                 </div>
         
                 <button type="submit">Guardar Movimiento</button>
             </form>
+
+            {% if movimientos %}
+            <div class="historial-seccion">
+                <p class="historial-titulo">Últimos registros</p>
+                {% for m in movimientos %}
+                <div class="movimiento-item">
+                    <span class="concepto-texto">{{ m.concepto }}</span>
+                    <span class="{% if m.monto < 0 %}monto-positivo{% else %}monto-negativo{% endif %}">
+                        {{ "$" ~ m.monto }}
+                    </span>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
             <a href="/" class="back-link">✖ Cancelar</a>
         </div> 
     </div> 
 
     <script>
-        // Obtenemos la fecha local actual en formato YYYY-MM-DD
         const hoy = new Date();
         const offset = hoy.getTimezoneOffset() * 60000;
         const fechaLocal = new Date(hoy - offset).toISOString().split('T')[0];
-        
         const campoFecha = document.getElementById('fecha_input');
-        
-        // 1. Setea la fecha por defecto (hoy)
         campoFecha.value = fechaLocal;
-        
-        // 2. Bloquea cualquier fecha futura
         campoFecha.max = fechaLocal;
     </script>
 </body>
