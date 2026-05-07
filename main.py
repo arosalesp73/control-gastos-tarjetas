@@ -82,19 +82,27 @@ async def formulario_tarjeta(request: Request):
     return HTMLResponse(content=template.render({"request": request, "user": user, "css": DARK_CSS}))
 
 @app.post("/tarjetas/guardar")
-async def guardar_tarjeta(request: Request, nombre_tarjeta: str = Form(...)):
+async def guardar_tarjeta(
+    request: Request, 
+    nombre_tarjeta: str = Form(...),
+    dia_corte: int = Form(...),
+    dia_pago: int = Form(...)
+):
     user = request.session.get("user")
     if not user: return RedirectResponse(url="/login")
 
     try:
         supabase.table("tarjetas").insert({
             "nombre_tarjeta": nombre_tarjeta.strip(),
-            "usuario_id": user["id"]
+            "usuario_id": user["id"],
+            "dia_corte": dia_corte,
+            "dia_pago": dia_pago
         }).execute()
         return RedirectResponse(url="/", status_code=303)
     except Exception as e:
+        print(f"Error al guardar tarjeta: {e}")
         return HTMLResponse(content=f"Error al guardar tarjeta: {str(e)}", status_code=500)
-
+        
 # --- GESTIÓN DE MOVIMIENTOS (COMPRAS Y ABONOS) ---
 
 @app.get("/movimientos/nuevo/{nombre_tarjeta}", response_class=HTMLResponse)
