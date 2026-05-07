@@ -33,16 +33,16 @@
         <table>
             <thead>
                 <tr>
+                    <th>ID</th>
                     <th>Usuario</th>
-                    <th>Correo</th>
                     <th>Rol</th>
                 </tr>
             </thead>
             <tbody>
                 {% for u in lista_usuarios %}
                 <tr>
+                    <td style="color: #555;">{{ u.id }}</td>
                     <td><strong>{{ u.username }}</strong></td>
-                    <td>{{ u.email }}</td>
                     <td>
                         <span class="role-badge {% if u.role == 'admin' %}admin-badge{% endif %}">
                             {{ u.role }}
@@ -59,10 +59,6 @@
                 <div class="form-group">
                     <label>Nombre de Usuario:</label>
                     <input type="text" name="nuevo_username" placeholder="Ej. alfredo_m" required>
-                </div>
-                <div class="form-group">
-                    <label>Correo Electrónico:</label>
-                    <input type="email" name="nuevo_email" placeholder="correo@ejemplo.com" required>
                 </div>
                 <div class="form-group">
                     <label>Contraseña Temporal:</label>
