@@ -139,3 +139,31 @@ async def crear_usuario(
     except Exception as e:
         print(f"Error al crear usuario: {e}")
         return HTMLResponse(content=f"Error al crear usuario: {str(e)}", status_code=500)
+
+# 1. Ruta para ver el formulario de nueva tarjeta
+@app.get("/tarjetas/nueva", response_class=HTMLResponse)
+async def formulario_tarjeta(request: Request):
+    user = request.session.get("user")
+    if not user:
+        return RedirectResponse(url="/login")
+    
+    template = templates.get_template("nueva_tarjeta.html")
+    return HTMLResponse(content=template.render({"request": request, "user": user, "css": DARK_CSS}))
+
+# 2. Ruta para procesar el guardado de la tarjeta
+@app.post("/tarjetas/guardar")
+async def guardar_tarjeta(request: Request, nombre_tarjeta: str = Form(...)):
+    user = request.session.get("user")
+    if not user:
+        return RedirectResponse(url="/login")
+
+    try:
+        # Guardamos la tarjeta ligada al ID del usuario actual
+        supabase.table("tarjetas").insert({
+            "nombre_tarjeta": nombre_tarjeta,
+            "usuario_id": user["id"]
+        }).execute()
+        
+        return RedirectResponse(url="/", status_code=303)
+    except Exception as e:
+        return HTMLResponse(content=f"Error al guardar tarjeta: {str(e)}", status_code=500)
