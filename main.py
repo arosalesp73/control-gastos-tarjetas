@@ -34,7 +34,7 @@ async def inicio(request: Request):
         if not user:
             return RedirectResponse(url="/login")
 
-        # FILTRO DE PRIVACIDAD: Solo traemos las tarjetas del usuario logueado
+        # Solo traemos las tarjetas del usuario logueado
         tarjetas = supabase.table("tarjetas")\
             .select("*")\
             .eq("usuario_id", user["id"])\
@@ -88,7 +88,7 @@ async def guardar_tarjeta(request: Request, nombre_tarjeta: str = Form(...)):
 
     try:
         supabase.table("tarjetas").insert({
-            "nombre_tarjeta": nombre_tarjeta,
+            "nombre_tarjeta": nombre_tarjeta.strip(),
             "usuario_id": user["id"]
         }).execute()
         return RedirectResponse(url="/", status_code=303)
@@ -102,11 +102,32 @@ async def formulario_movimiento(request: Request, nombre_tarjeta: str):
     user = request.session.get("user")
     if not user: return RedirectResponse(url="/login")
     
+    nombre_limpio = nombre_tarjeta.strip()
+    movimientos = []
+    
+    try:
+        # Buscamos los últimos 5 movimientos para esta tarjeta y este usuario
+        # Filtramos por usuario_id y por el nombre exacto de la tarjeta
+        res = supabase.table("movimientos")\
+            .select("*")\
+            .eq("usuario_id", user["id"])\
+            .eq("tarjeta", nombre_limpio)\
+            .order("fecha", desc=True)\
+            .limit(5)\
+            .execute()
+        
+        movimientos = res.data if res.data else []
+        print(f"DEBUG: Movimientos encontrados para {nombre_limpio}: {len(movimientos)}")
+        
+    except Exception as e:
+        print(f"Error al obtener movimientos: {e}")
+
     template = templates.get_template("registrar_movimiento.html")
     return HTMLResponse(content=template.render({
         "request": request, 
         "user": user, 
-        "nombre_tarjeta": nombre_tarjeta,
+        "nombre_tarjeta": nombre_limpio,
+        "movimientos": movimientos,
         "css": DARK_CSS
     }))
 
@@ -116,18 +137,18 @@ async def guardar_movimiento(
     tarjeta_nombre: str = Form(...),
     concepto: str = Form(...),
     monto: float = Form(...),
-    tipo_movimiento: str = Form(...), # 'compra' o 'abono'
+    tipo_movimiento: str = Form(...), 
     fecha: str = Form(...)
 ):
     user = request.session.get("user")
     if not user: return RedirectResponse(url="/login", status_code=303)
 
-    # LÓGICA DE NEGATIVOS: Si es abono a la TDC, el monto se guarda negativo
+    # El monto se guarda negativo si es un abono para facilitar cálculos
     monto_final = monto * -1 if tipo_movimiento == 'abono' else monto
 
     try:
         supabase.table("movimientos").insert({
-            "tarjeta": tarjeta_nombre,
+            "tarjeta": tarjeta_nombre.strip(),
             "concepto": concepto,
             "monto": monto_final,
             "fecha": fecha,
@@ -135,7 +156,8 @@ async def guardar_movimiento(
             "tipo": tipo_movimiento
         }).execute()
         
-        return RedirectResponse(url="/", status_code=303)
+        # Redirigimos a la misma pantalla para ver el registro actualizado
+        return RedirectResponse(url=f"/movimientos/nuevo/{tarjeta_nombre}", status_code=303)
     except Exception as e:
         print(f"Error al guardar movimiento: {e}")
         return HTMLResponse(content=f"Error al registrar: {str(e)}", status_code=500)
