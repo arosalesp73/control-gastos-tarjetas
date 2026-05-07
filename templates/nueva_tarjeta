@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nueva Tarjeta</title>
+    <style>
+        {{ css | safe }}
+        .container { max-width: 400px; margin: 100px auto; padding: 20px; }
+        .form-card { background: var(--surface); padding: 30px; border-radius: 12px; border: 1px solid #333; }
+        .form-group { margin-bottom: 20px; }
+        input, button { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #444; background: #0f0f1a; color: white; margin-top: 10px; box-sizing: border-box; }
+        button { background: #6c63ff; border: none; font-weight: bold; cursor: pointer; }
+        .back-link { display: block; text-align: center; margin-top: 20px; color: #666; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="form-card">
+            <h2 style="margin-top: 0;">💳 Nueva Tarjeta</h2>
+            <form action="/tarjetas/guardar" method="post">
+                <div class="form-group">
+                    <label>Nombre de la Tarjeta o Banco:</label>
+                    <input type="text" name="nombre_tarjeta" placeholder="Ej. BBVA Débito" required autofocus>
+                </div>
+                <button type="submit">Guardar Tarjeta</button>
+            </form>
+            <a href="/" class="back-link">Cancelar y volver</a>
+        </div>
+    </div>
+</body>
+</html>
