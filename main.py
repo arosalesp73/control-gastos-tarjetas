@@ -23,7 +23,8 @@ input, select { width: 100%; padding: 10px; margin-bottom: 10px; border-radius: 
 button { width: 100%; padding: 10px; background: var(--accent); border: none; color: white; border-radius: 5px; cursor: pointer; }
 """
 
-# --- INICIO Y LOGIN ---
+# --- RUTAS DE NAVEGACIÓN ---
+
 @app.get("/", response_class=HTMLResponse)
 async def inicio(request: Request):
     user = request.session.get("user")
@@ -48,50 +49,98 @@ async def logout(request: Request):
     request.session.clear()
     return RedirectResponse("/login")
 
-# --- GESTIÓN DE TARJETAS (EL LÁPIZ Y EL BOTE) ---
+# --- MÓDULO: AGREGAR TARJETA NUEVA ---
 
-@app.get("/tarjetas/editar/{nombre}", response_class=HTMLResponse)
-async def f_editar_tarjeta(request: Request, nombre: str):
+@app.get("/tarjetas/nueva", response_class=HTMLResponse)
+async def f_nueva_tarjeta(request: Request):
     user = request.session.get("user")
     if not user: return RedirectResponse("/login")
+    return templates.TemplateResponse("nueva_tarjeta.html", {"request": request, "user": user, "css": DARK_CSS})
+
+@app.post("/tarjetas/guardar")
+async def g_tarjeta(request: Request, nombre_tarjeta: str = Form(...), dia_corte: int = Form(...), dia_pago: int = Form(...)):
+    user = request.session.get("user")
+    if not user: return RedirectResponse("/login")
+    supabase.table("tarjetas").insert({
+        "nombre_tarjeta": nombre_tarjeta, 
+        "usuario_id": user["id"], 
+        "dia_corte": dia_corte, 
+        "dia_pago": dia_pago
+    }).execute()
+    return RedirectResponse("/", status_code=303)
+
+# --- MÓDULO: REPORTES EXCEL ---
+
+@app.get("/reportes", response_class=HTMLResponse)
+async def rep_ui(request: Request):
+    user = request.session.get("user")
+    if not user: return RedirectResponse("/login")
+    res = supabase.table("tarjetas").select("nombre_tarjeta").eq("usuario_id", user["id"]).execute()
+    return templates.TemplateResponse("reportes.html", {"request": request, "tarjetas": res.data, "css": DARK_CSS})
+
+@app.get("/reportes/excel")
+async def generar_excel(request: Request):
+    user = request.session.get("user")
+    if not user: return RedirectResponse("/login")
+    
+    # Obtenemos movimientos del usuario
+    res = supabase.table("movimientos").select("*").eq("usuario_id", user["id"]).execute()
+    if not res.data:
+        return RedirectResponse("/reportes")
+        
+    df = pd.DataFrame(res.data)
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False, sheet_name='Gastos')
+    output.seek(0)
+    
+    headers = {"Content-Disposition": "attachment; filename=reporte_gastos.xlsx"}
+    return StreamingResponse(output, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", headers=headers)
+
+# --- MÓDULO: PERFILES (ADMINISTRACIÓN) ---
+
+@app.get("/admin/usuarios", response_class=HTMLResponse)
+async def panel_usuarios(request: Request):
+    user = request.session.get("user")
+    # Validación de seguridad: solo admin entra aquí
+    if not user or user.get("role") != 'admin': 
+        return RedirectResponse("/")
+    
+    res = supabase.table("usuarios").select("*").execute()
+    return templates.TemplateResponse("usuarios.html", {
+        "request": request, 
+        "user": user, 
+        "lista_usuarios": res.data, 
+        "css": DARK_CSS
+    })
+
+@app.post("/admin/crear_usuario")
+async def c_usuario(request: Request, nuevo_username: str = Form(...), nuevo_password: str = Form(...), nuevo_role: str = Form(...)):
+    user = request.session.get("user")
+    if not user or user.get("role") != 'admin': return RedirectResponse("/")
+    
+    supabase.table("usuarios").insert({
+        "username": nuevo_username, 
+        "password": nuevo_password, 
+        "role": nuevo_role
+    }).execute()
+    return RedirectResponse("/admin/usuarios", status_code=303)
+
+# --- RUTAS DE EDICIÓN Y MOVIMIENTOS (LAS QUE YA FUNCIONAN) ---
+
+@app.get("/tarjetas/editar/{nombre}", response_class=HTMLResponse)
+async def f_editar(request: Request, nombre: str):
+    user = request.session.get("user")
     res = supabase.table("tarjetas").select("*").eq("nombre_tarjeta", nombre).eq("usuario_id", user["id"]).execute()
-    if not res.data: return RedirectResponse("/")
     return templates.TemplateResponse("editar_tarjeta.html", {"request": request, "tarjeta": res.data[0], "css": DARK_CSS})
 
 @app.post("/tarjetas/actualizar")
-async def actualizar_tarjeta(
-    request: Request, 
-    nombre_tarjeta: str = Form(...), 
-    dia_corte: int = Form(...), 
-    dia_pago: int = Form(...),
-    id_tarjeta: int = Form(None),  # Lo ponemos opcional aquí
-    id: int = Form(None)           # Y aceptamos 'id' también
-):
+async def actualizar_tarjeta(request: Request, nombre_tarjeta: str = Form(...), dia_corte: int = Form(...), dia_pago: int = Form(...), id_tarjeta: int = Form(None), id: int = Form(None)):
     user = request.session.get("user")
-    if not user: return RedirectResponse("/login")
-    
-    # Usamos el que venga disponible
     target_id = id_tarjeta if id_tarjeta is not None else id
-    
-    if target_id is None:
-        raise HTTPException(status_code=400, detail="No se recibió el ID de la tarjeta")
-
-    supabase.table("tarjetas").update({
-        "nombre_tarjeta": nombre_tarjeta, 
-        "dia_corte": dia_corte, 
-        "dia_pago": dia_pago
-    }).eq("id", target_id).eq("usuario_id", user["id"]).execute()
-    
+    supabase.table("tarjetas").update({"nombre_tarjeta": nombre_tarjeta, "dia_corte": dia_corte, "dia_pago": dia_pago}).eq("id", target_id).eq("usuario_id", user["id"]).execute()
     return RedirectResponse("/", status_code=303)
 
-@app.get("/tarjetas/eliminar/{nombre}")
-async def eliminar_tarjeta(request: Request, nombre: str):
-    user = request.session.get("user")
-    supabase.table("movimientos").delete().eq("tarjeta", nombre).eq("usuario_id", user["id"]).execute()
-    supabase.table("tarjetas").delete().eq("nombre_tarjeta", nombre).eq("usuario_id", user["id"]).execute()
-    return RedirectResponse("/", status_code=303)
-
-# --- MOVIMIENTOS ---
 @app.get("/movimientos/nuevo/{tarjeta}", response_class=HTMLResponse)
 async def n_mov(request: Request, tarjeta: str):
     user = request.session.get("user")
@@ -105,14 +154,9 @@ async def g_mov(request: Request, tarjeta_nombre: str = Form(...), concepto: str
     supabase.table("movimientos").insert({"tarjeta": tarjeta_nombre, "concepto": concepto, "monto": monto_f, "fecha": fecha, "usuario_id": user["id"], "tipo": tipo_movimiento}).execute()
     return RedirectResponse(f"/movimientos/nuevo/{tarjeta_nombre}", status_code=303)
 
-# --- REPORTES EXCEL ---
-@app.get("/reportes/excel")
-async def reporte_excel(request: Request):
+@app.get("/tarjetas/eliminar/{nombre}")
+async def eliminar_tarjeta(request: Request, nombre: str):
     user = request.session.get("user")
-    res = supabase.table("movimientos").select("*").eq("usuario_id", user["id"]).execute()
-    df = pd.DataFrame(res.data)
-    output = io.BytesIO()
-    with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        df.to_excel(writer, index=False, sheet_name='Movimientos')
-    output.seek(0)
-    return StreamingResponse(output, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", headers={"Content-Disposition": "attachment; filename=mis_gastos.xlsx"})
+    supabase.table("movimientos").delete().eq("tarjeta", nombre).eq("usuario_id", user["id"]).execute()
+    supabase.table("tarjetas").delete().eq("nombre_tarjeta", nombre).eq("usuario_id", user["id"]).execute()
+    return RedirectResponse("/", status_code=303)
