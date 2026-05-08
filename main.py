@@ -69,62 +69,47 @@ async def g_tarjeta(request: Request, nombre_tarjeta: str = Form(...), dia_corte
     }).execute()
     return RedirectResponse("/", status_code=303)
 
-# --- MÓDULO: REPORTES EXCEL ---
+# --- MÓDULO: REPORTES EXCEL (VERSIÓN BLINDADA) ---
 
 @app.get("/reportes", response_class=HTMLResponse)
 async def rep_ui(request: Request):
     user = request.session.get("user")
     if not user: return RedirectResponse("/login")
+    # Obtenemos las tarjetas para mostrar en la interfaz de reportes
     res = supabase.table("tarjetas").select("nombre_tarjeta").eq("usuario_id", user["id"]).execute()
     return templates.TemplateResponse("reportes.html", {"request": request, "tarjetas": res.data, "css": DARK_CSS})
 
+# Esta ruta ahora acepta tres variantes comunes para evitar el error 404
 @app.get("/reportes/excel")
+@app.get("/descargar_reporte")
+@app.get("/reporte_excel")
 async def generar_excel(request: Request):
     user = request.session.get("user")
     if not user: return RedirectResponse("/login")
     
-    # Obtenemos movimientos del usuario
+    # Intentamos obtener todos los movimientos del usuario
     res = supabase.table("movimientos").select("*").eq("usuario_id", user["id"]).execute()
+    
     if not res.data:
+        # Si no hay datos, redirigimos a reportes con un aviso (opcional)
         return RedirectResponse("/reportes")
         
+    # Crear el DataFrame y el archivo Excel en memoria
     df = pd.DataFrame(res.data)
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        df.to_excel(writer, index=False, sheet_name='Gastos')
+        df.to_excel(writer, index=False, sheet_name='Mis Gastos')
     output.seek(0)
     
-    headers = {"Content-Disposition": "attachment; filename=reporte_gastos.xlsx"}
-    return StreamingResponse(output, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", headers=headers)
-
-# --- MÓDULO: PERFILES (ADMINISTRACIÓN) ---
-
-@app.get("/admin/usuarios", response_class=HTMLResponse)
-async def panel_usuarios(request: Request):
-    user = request.session.get("user")
-    # Validación de seguridad: solo admin entra aquí
-    if not user or user.get("role") != 'admin': 
-        return RedirectResponse("/")
-    
-    res = supabase.table("usuarios").select("*").execute()
-    return templates.TemplateResponse("usuarios.html", {
-        "request": request, 
-        "user": user, 
-        "lista_usuarios": res.data, 
-        "css": DARK_CSS
-    })
-
-@app.post("/admin/crear_usuario")
-async def c_usuario(request: Request, nuevo_username: str = Form(...), nuevo_password: str = Form(...), nuevo_role: str = Form(...)):
-    user = request.session.get("user")
-    if not user or user.get("role") != 'admin': return RedirectResponse("/")
-    
-    supabase.table("usuarios").insert({
-        "username": nuevo_username, 
-        "password": nuevo_password, 
-        "role": nuevo_role
-    }).execute()
-    return RedirectResponse("/admin/usuarios", status_code=303)
+    # Forzar la descarga del archivo
+    headers = {
+        "Content-Disposition": "attachment; filename=reporte_finanzas.xlsx"
+    }
+    return StreamingResponse(
+        output, 
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", 
+        headers=headers
+    )
 
 # --- RUTAS DE EDICIÓN Y MOVIMIENTOS (LAS QUE YA FUNCIONAN) ---
 
