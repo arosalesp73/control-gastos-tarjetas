@@ -127,6 +127,41 @@ async def eliminar_tarjeta(request: Request, nombre_tarjeta: str):
     except Exception as e:
         print(f"Error al eliminar tarjeta: {e}")
         return HTMLResponse(content=f"Error al eliminar: {str(e)}", status_code=500)
+
+@app.get("/tarjetas/editar/{nombre_tarjeta}", response_class=HTMLResponse)
+async def editar_tarjeta_ui(request: Request, nombre_tarjeta: str):
+    user = request.session.get("user")
+    if not user: return RedirectResponse(url="/login")
+    
+    res = supabase.table("tarjetas").select("*").eq("nombre_tarjeta", nombre_tarjeta).eq("usuario_id", user["id"]).execute()
+    if not res.data:
+        return HTMLResponse("Tarjeta no encontrada", status_code=404)
+    
+    tarjeta = res.data[0]
+    template = templates.get_template("editar_tarjeta.html")
+    return HTMLResponse(content=template.render({"request": request, "tarjeta": tarjeta, "css": DARK_CSS}))
+
+@app.post("/tarjetas/actualizar")
+async def actualizar_tarjeta(
+    request: Request,
+    id: int = Form(...),
+    nombre_tarjeta: str = Form(...),
+    dia_corte: int = Form(...),
+    dia_pago: int = Form(...)
+):
+    user = request.session.get("user")
+    if not user: return RedirectResponse(url="/login")
+
+    try:
+        supabase.table("tarjetas").update({
+            "nombre_tarjeta": nombre_tarjeta.strip(),
+            "dia_corte": dia_corte,
+            "dia_pago": dia_pago
+        }).eq("id", id).eq("usuario_id", user["id"]).execute()
+        
+        return RedirectResponse(url="/", status_code=303)
+    except Exception as e:
+        return HTMLResponse(content=f"Error al actualizar tarjeta: {str(e)}", status_code=500)
         
 # --- GESTIÓN DE MOVIMIENTOS (COMPRAS Y ABONOS) ---
 
