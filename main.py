@@ -59,13 +59,29 @@ async def f_editar_tarjeta(request: Request, nombre: str):
     return templates.TemplateResponse("editar_tarjeta.html", {"request": request, "tarjeta": res.data[0], "css": DARK_CSS})
 
 @app.post("/tarjetas/actualizar")
-async def actualizar_tarjeta(request: Request, id_tarjeta: int = Form(...), nombre_tarjeta: str = Form(...), dia_corte: int = Form(...), dia_pago: int = Form(...)):
+async def actualizar_tarjeta(
+    request: Request, 
+    nombre_tarjeta: str = Form(...), 
+    dia_corte: int = Form(...), 
+    dia_pago: int = Form(...),
+    id_tarjeta: int = Form(None),  # Lo ponemos opcional aquí
+    id: int = Form(None)           # Y aceptamos 'id' también
+):
     user = request.session.get("user")
+    if not user: return RedirectResponse("/login")
+    
+    # Usamos el que venga disponible
+    target_id = id_tarjeta if id_tarjeta is not None else id
+    
+    if target_id is None:
+        raise HTTPException(status_code=400, detail="No se recibió el ID de la tarjeta")
+
     supabase.table("tarjetas").update({
         "nombre_tarjeta": nombre_tarjeta, 
         "dia_corte": dia_corte, 
         "dia_pago": dia_pago
-    }).eq("id", id_tarjeta).eq("usuario_id", user["id"]).execute()
+    }).eq("id", target_id).eq("usuario_id", user["id"]).execute()
+    
     return RedirectResponse("/", status_code=303)
 
 @app.get("/tarjetas/eliminar/{nombre}")
