@@ -16,10 +16,12 @@
         /* Estilos para el historial discreto */
         .historial-seccion { margin-top: 30px; border-top: 1px solid #333; padding-top: 20px; }
         .historial-titulo { font-size: 0.9em; color: #666; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 1px; }
-        .movimiento-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #222; font-size: 0.85em; }
+        .movimiento-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #222; font-size: 0.85em; }
         .monto-negativo { color: #ff6b6b; }
         .monto-positivo { color: #51cf66; }
-        .concepto-texto { color: #bbb; }
+        .concepto-texto { color: #bbb; display: flex; align-items: center; }
+        .btn-edit { text-decoration: none; margin-right: 10px; font-size: 1.1em; opacity: 0.7; }
+        .btn-edit:hover { opacity: 1; }
         
         .info-tarjeta { background: #1a1a2e; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #6c63ff; }
         .back-link { display: block; text-align: center; margin-top: 20px; color: #666; text-decoration: none; font-size: 0.85em; }
@@ -69,9 +71,12 @@
                 {% if movimientos and movimientos|length > 0 %}
                     {% for m in movimientos %}
                     <div class="movimiento-item">
-                        <span class="concepto-texto">{{ m.concepto }}</span>
+                        <span class="concepto-texto">
+                            <a href="/movimientos/editar/{{ m.id }}" class="btn-edit" title="Editar">✏️</a>
+                            {{ m.concepto }}
+                        </span>
                         <span class="{% if m.monto < 0 %}monto-positivo{% else %}monto-negativo{% endif %}">
-                            {{ "$" ~ m.monto }}
+                            {{ "$" ~ ("%.2f"|format(m.monto)) }}
                         </span>
                     </div>
                     {% endfor %}
@@ -85,12 +90,15 @@
     </div> 
 
     <script>
+        // Script para poner la fecha de hoy por defecto
         const hoy = new Date();
         const offset = hoy.getTimezoneOffset() * 60000;
         const fechaLocal = new Date(hoy - offset).toISOString().split('T')[0];
         const campoFecha = document.getElementById('fecha_input');
-        campoFecha.value = fechaLocal;
-        campoFecha.max = fechaLocal;
+        if (campoFecha) {
+            campoFecha.value = fechaLocal;
+            campoFecha.max = fechaLocal;
+        }
     </script>
 </body>
 </html>
