@@ -195,6 +195,42 @@ async def guardar_movimiento(
         print(f"Error al guardar movimiento: {e}")
         return HTMLResponse(content=f"Error al registrar: {str(e)}", status_code=500)
 
+@app.get("/movimientos/editar/{movimiento_id}", response_class=HTMLResponse)
+async def editar_movimiento_ui(request: Request, movimiento_id: int):
+    user = request.session.get("user")
+    if not user: return RedirectResponse(url="/login")
+    
+    res = supabase.table("movimientos").select("*").eq("id", movimiento_id).eq("usuario_id", user["id"]).execute()
+    if not res.data:
+        return HTMLResponse("Movimiento no encontrado", status_code=404)
+    
+    movimiento = res.data[0]
+    template = templates.get_template("editar_movimiento.html")
+    return HTMLResponse(content=template.render({"request": request, "movimiento": movimiento, "css": DARK_CSS}))
+
+@app.post("/movimientos/actualizar")
+async def actualizar_movimiento(
+    request: Request,
+    id: int = Form(...),
+    concepto: str = Form(...),
+    monto: float = Form(...),
+    fecha: str = Form(...),
+    tarjeta: str = Form(...)
+):
+    user = request.session.get("user")
+    if not user: return RedirectResponse(url="/login")
+
+    try:
+        supabase.table("movimientos").update({
+            "concepto": concepto,
+            "monto": monto,
+            "fecha": fecha
+        }).eq("id", id).eq("usuario_id", user["id"]).execute()
+        
+        return RedirectResponse(url=f"/movimientos/nuevo/{tarjeta}", status_code=303)
+    except Exception as e:
+        return HTMLResponse(content=f"Error al actualizar: {str(e)}", status_code=500)
+
 # --- ADMINISTRACIÓN DE USUARIOS ---
 
 @app.get("/admin/usuarios", response_class=HTMLResponse)
