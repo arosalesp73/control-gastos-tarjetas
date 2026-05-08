@@ -34,7 +34,7 @@ async def inicio(request: Request):
         if not user:
             return RedirectResponse(url="/login")
 
-        # Solo traemos las tarjetas del usuario logueado
+        # Traemos las tarjetas con las nuevas columnas
         tarjetas = supabase.table("tarjetas")\
             .select("*")\
             .eq("usuario_id", user["id"])\
