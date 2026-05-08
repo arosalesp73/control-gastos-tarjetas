@@ -2,9 +2,8 @@ import io
 import os
 import pandas as pd
 import httpx
-import asyncio
 from datetime import datetime
-from fastapi import FastAPI, Form, Request, HTTPException, Depends
+from fastapi import FastAPI, Form, Request, HTTPException
 from fastapi.responses import HTMLResponse, StreamingResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
@@ -13,12 +12,18 @@ from apscheduler.schedulers.background import BackgroundScheduler
 
 app = FastAPI()
 
+# Middleware de sesión
 app.add_middleware(SessionMiddleware, secret_key=os.environ.get("SESSION_SECRET", "personal-key-123"))
 
+# Configuración de templates
 templates = Jinja2Templates(directory="templates")
 templates.env.cache = None 
 
-supabase: Client = create_client(os.environ.get("SUPABASE_URL"), os.environ.get("SUPABASE_KEY"))
+# Conexión Supabase
+supabase: Client = create_client(
+    os.environ.get("SUPABASE_URL"), 
+    os.environ.get("SUPABASE_KEY")
+)
 
 # --- KEEP ALIVE ---
 def self_ping():
@@ -27,12 +32,14 @@ def self_ping():
         try:
             with httpx.Client() as client:
                 client.get(f"{url}/login")
-        except: pass
+        except:
+            pass
 
 scheduler = BackgroundScheduler()
 scheduler.add_job(self_ping, 'interval', minutes=12)
 scheduler.start()
 
+# --- ESTILOS ---
 DARK_CSS = """
 :root { --bg: #0e0e1a; --surface: #181828; --accent: #6c63ff; --text: #e0e0f0; --input-bg: #0f0f1a; } 
 body { background-color: var(--bg); background-image: url('https://www.transparenttextures.com/patterns/carbon-fibre.png'), linear-gradient(rgba(14, 14, 26, 0.95), rgba(14, 14, 26, 0.95)); background-attachment: fixed; color: var(--text); font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; min-height: 100vh; }
@@ -41,6 +48,7 @@ input, select { width: 100%; padding: 14px; border-radius: 10px; border: 1px sol
 button { width: 100%; padding: 14px; background: var(--accent); border: none; color: white; font-weight: bold; border-radius: 10px; cursor: pointer; font-size: 16px; }
 """
 
+# --- RUTAS ---
 @app.get("/", response_class=HTMLResponse)
 async def inicio(request: Request):
     user = request.session.get("user")
@@ -50,7 +58,7 @@ async def inicio(request: Request):
 
 @app.get("/login", response_class=HTMLResponse)
 async def login_ui(request: Request, error: str = None):
-    err = f'<div style="color:#ff4e4e; text-align:center; margin-bottom:15px;">⚠️ Error de acceso</div>' if error else ""
+    err = f'<div style="color:#ff4e4e; text-align:center; margin-bottom:15px;">⚠️ Acceso denegado</div>' if error else ""
     return f"""<html><head><meta name="viewport" content="width=device-width, initial-scale=1.0"><style>{DARK_CSS}</style></head><body><div style="display:flex; justify-content:center; align-items:center; height:100vh; padding:20px;"><div class="card" style="width:100%; max-width:350px; text-align:center;"><h2>Mis Finanzas</h2>{err}<form action="/login" method="post"><input name="username" placeholder="Usuario" required><input name="password" type="password" placeholder="Contraseña" required><button type="submit">Entrar</button></form></div></div></body></html>"""
 
 @app.post("/login")
@@ -66,7 +74,7 @@ async def logout(request: Request):
     request.session.clear()
     return RedirectResponse("/login")
 
-# --- GESTIÓN DE TARJETAS (Simplificado) ---
+# --- TARJETAS ---
 @app.get("/tarjetas/nueva")
 async def f_tarjeta(request: Request):
     return templates.TemplateResponse("nueva_tarjeta.html", {"request": request, "user": request.session.get("user"), "css": DARK_CSS})
@@ -107,7 +115,7 @@ async def g_mov(request: Request, tarjeta_nombre: str = Form(...), concepto: str
     supabase.table("movimientos").insert({"tarjeta": tarjeta_nombre, "concepto": concepto, "monto": monto_f, "fecha": fecha, "usuario_id": request.session.get("user")["id"], "tipo": tipo_movimiento}).execute()
     return RedirectResponse(f"/movimientos/nuevo/{tarjeta_nombre}", status_code=303)
 
-# --- ADMINISTRACIÓN DE USUARIOS (NUEVO) ---
+# --- ADMIN ---
 @app.get("/admin/usuarios")
 async def g_usuarios(request: Request):
     user = request.session.get("user")
@@ -115,17 +123,10 @@ async def g_usuarios(request: Request):
     todos = supabase.table("usuarios").select("*").execute().data
     return templates.TemplateResponse("usuarios.html", {"request": request, "user": user, "lista_usuarios": todos, "css": DARK_CSS})
 
-@app.post("/admin/crear_usuario")
-async def c_usuario(request: Request, nuevo_username: str = Form(...), nuevo_password: str = Form(...), nuevo_role: str = Form(...)):
-    supabase.table("usuarios").insert({"username": nuevo_username, "password": nuevo_password, "role": nuevo_role}).execute()
-    return RedirectResponse("/admin/usuarios", status_code=303)
-
 @app.get("/admin/usuarios/eliminar/{user_id}")
 async def el_usuario(request: Request, user_id: int):
     user = request.session.get("user")
-    if not user or user.get("role") != 'admin': return RedirectResponse("/")
-    # No permitir que el admin se borre a sí mismo por error
-    if user_id != user["id"]:
+    if user and user.get("role") == 'admin' and user_id != user["id"]:
         supabase.table("usuarios").delete().eq("id", user_id).execute()
     return RedirectResponse("/admin/usuarios", status_code=303)
 
@@ -139,6 +140,11 @@ async def ed_usuario_ui(request: Request, user_id: int):
 @app.post("/admin/usuarios/actualizar")
 async def ac_usuario(request: Request, id: int = Form(...), username: str = Form(...), password: str = Form(...), role: str = Form(...)):
     supabase.table("usuarios").update({"username": username, "password": password, "role": role}).eq("id", id).execute()
+    return RedirectResponse("/admin/usuarios", status_code=303)
+
+@app.post("/admin/crear_usuario")
+async def c_usuario(request: Request, nuevo_username: str = Form(...), nuevo_password: str = Form(...), nuevo_role: str = Form(...)):
+    supabase.table("usuarios").insert({"username": nuevo_username, "password": nuevo_password, "role": nuevo_role}).execute()
     return RedirectResponse("/admin/usuarios", status_code=303)
 
 # --- REPORTES ---
