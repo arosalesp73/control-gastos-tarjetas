@@ -15,7 +15,7 @@ app = FastAPI()
 # Middleware de sesión
 app.add_middleware(SessionMiddleware, secret_key=os.environ.get("SESSION_SECRET", "personal-key-123"))
 
-# Configuración de templates - Sin ninguna opción extra para evitar conflictos de caché
+# Configuración de templates
 templates = Jinja2Templates(directory="templates")
 
 # Conexión Supabase
@@ -57,14 +57,12 @@ async def inicio(request: Request):
     
     res = supabase.table("tarjetas").select("*").eq("usuario_id", user["id"]).execute()
     
-    # IMPORTANTE: Pasamos los datos uno por uno, de la forma más plana posible
-    contexto = {
+    return templates.TemplateResponse("index.html", {
         "request": request,
         "user": user,
         "tarjetas": res.data if res.data else [],
         "css": DARK_CSS
-    }
-    return templates.TemplateResponse("index.html", contexto)
+    })
 
 @app.get("/login", response_class=HTMLResponse)
 async def login_ui(request: Request, error: str = None):
@@ -105,16 +103,31 @@ async def logout(request: Request):
     request.session.clear()
     return RedirectResponse("/login")
 
-# --- ADMINISTRACIÓN ---
-@app.get("/admin/usuarios", response_class=HTMLResponse)
-async def g_usuarios(request: Request):
+# --- GESTIÓN DE TARJETAS ---
+
+@app.get("/tarjetas/nueva", response_class=HTMLResponse)
+async def f_tarjeta(request: Request):
     user = request.session.get("user")
-    if not user or user.get("role") != 'admin':
-        return RedirectResponse("/")
-    res = supabase.table("usuarios").select("*").execute()
-    return templates.TemplateResponse("usuarios.html", {"request": request, "user": user, "lista_usuarios": res.data, "css": DARK_CSS})
+    if not user: return RedirectResponse("/login")
+    return templates.TemplateResponse("nueva_tarjeta.html", {"request": request, "user": user, "css": DARK_CSS})
+
+@app.post("/tarjetas/guardar")
+async def g_tarjeta(request: Request, nombre_tarjeta: str = Form(...), dia_corte: int = Form(...), dia_pago: int = Form(...)):
+    user = request.session.get("user")
+    if not user: return RedirectResponse("/login")
+    supabase.table("tarjetas").insert({"nombre_tarjeta": nombre_tarjeta, "usuario_id": user["id"], "dia_corte": dia_corte, "dia_pago": dia_pago}).execute()
+    return RedirectResponse("/", status_code=303)
+
+@app.get("/tarjetas/eliminar/{nombre}")
+async def e_tarjeta(request: Request, nombre: str):
+    user = request.session.get("user")
+    if not user: return RedirectResponse("/login")
+    supabase.table("movimientos").delete().eq("tarjeta", nombre).eq("usuario_id", user["id"]).execute()
+    supabase.table("tarjetas").delete().eq("nombre_tarjeta", nombre).eq("usuario_id", user["id"]).execute()
+    return RedirectResponse("/", status_code=303)
 
 # --- MOVIMIENTOS ---
+
 @app.get("/movimientos/nuevo/{tarjeta}", response_class=HTMLResponse)
 async def n_mov(request: Request, tarjeta: str):
     user = request.session.get("user")
@@ -123,13 +136,14 @@ async def n_mov(request: Request, tarjeta: str):
     return templates.TemplateResponse("registrar_movimiento.html", {
         "request": request, 
         "nombre_tarjeta": tarjeta, 
-        "movimientos": res.data, 
+        "movimientos": res.data if res.data else [], 
         "css": DARK_CSS
     })
 
 @app.post("/movimientos/guardar")
 async def g_mov(request: Request, tarjeta_nombre: str = Form(...), concepto: str = Form(...), monto: float = Form(...), tipo_movimiento: str = Form(...), fecha: str = Form(...)):
     user = request.session.get("user")
+    if not user: return RedirectResponse("/login")
     monto_f = monto * -1 if tipo_movimiento == 'abono' else monto
     supabase.table("movimientos").insert({
         "tarjeta": tarjeta_nombre, 
@@ -140,3 +154,16 @@ async def g_mov(request: Request, tarjeta_nombre: str = Form(...), concepto: str
         "tipo": tipo_movimiento
     }).execute()
     return RedirectResponse(f"/movimientos/nuevo/{tarjeta_nombre}", status_code=303)
+
+# --- REPORTES ---
+
+@app.get("/reportes", response_class=HTMLResponse)
+async def rep_ui(request: Request):
+    user = request.session.get("user")
+    if not user: return RedirectResponse("/login")
+    res = supabase.table("tarjetas").select("nombre_tarjeta").eq("usuario_id", user["id"]).execute()
+    return templates.TemplateResponse("reportes.html", {
+        "request": request, 
+        "tarjetas": res.data if res.data else [], 
+        "css": DARK_CSS
+    })
