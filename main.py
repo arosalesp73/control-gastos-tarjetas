@@ -98,31 +98,35 @@ async def generar_excel(
     
     df = pd.DataFrame(res.data)
     
-    # 1. Convertimos la columna a formato fecha para que el orden sea exacto
-    df["fecha"] = pd.to_datetime(df["fecha"])
+    # --- BLINDAJE CONTRA ERRORES DE FECHA ---
+    # Convertimos a fecha, lo que no sea fecha se vuelve NaT (Not a Time) en lugar de dar error
+    df["fecha"] = pd.to_datetime(df["fecha"], errors='coerce')
     
-    # 2. ORDENAR: De la más vieja a la más nueva (Ascending=True)
+    # Eliminamos filas que se hayan quedado sin fecha para que no rompan el ordenamiento
+    df = df.dropna(subset=["fecha"])
+    
+    # Ahora sí, ordenamos de la más vieja a la más nueva
     df = df.sort_values(by="fecha", ascending=True)
     
-    # 3. Formateamos la fecha a texto para que en el Excel se vea limpia (AAAA-MM-DD)
-    df["fecha"] = df["fecha"].dt.strftime('%Y-%m-%d')
+    # Formateamos para el Excel
+    df["fecha_limpia"] = df["fecha"].dt.strftime('%Y-%m-%d')
     
     # Seleccionamos y ordenamos columnas según tu petición
-    columnas_interes = ["fecha", "concepto", "monto", "tipo"]
-    df = df[columnas_interes]
-    df.columns = ["Fecha", "Concepto", "Monto", "Tipo"]
+    # Usamos 'fecha_limpia' para que se vea bien
+    df_final = df[["fecha_limpia", "concepto", "monto", "tipo"]].copy()
+    df_final.columns = ["Fecha", "Concepto", "Monto", "Tipo"]
     
-    # Formato de doble decimal (.99)
-    df["Monto"] = df["Monto"].map("{:.2f}".format)
+    # Formato de doble decimal
+    df_final["Monto"] = df_final["Monto"].map("{:.2f}".format)
     
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        df.to_excel(writer, index=False, sheet_name='Mis Gastos')
+        df_final.to_excel(writer, index=False, sheet_name='Mis Gastos')
         
         # Ajuste automático del ancho de columnas
         worksheet = writer.sheets['Mis Gastos']
-        for idx, col in enumerate(df.columns):
-            max_len = max(df[col].astype(str).map(len).max(), len(col)) + 2
+        for idx, col in enumerate(df_final.columns):
+            max_len = max(df_final[col].astype(str).map(len).max(), len(col)) + 2
             worksheet.column_dimensions[chr(65 + idx)].width = max_len
 
     output.seek(0)
