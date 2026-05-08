@@ -136,12 +136,12 @@ async def nuevo_movimiento(request: Request, tarjeta_nombre: str):
     if not user: return RedirectResponse(url="/login")
 
     try:
-        # Aquí añadimos el .order para que bajen los más nuevos primero
+        # Cambiamos "fecha" por "id" para un orden de registro real (Pila)
         res = supabase.table("movimientos")\
             .select("*")\
             .eq("tarjeta", tarjeta_nombre)\
             .eq("usuario_id", user["id"])\
-            .order("fecha", desc=True)\
+            .order("id", desc=True)\
             .limit(5)\
             .execute()
         
@@ -157,7 +157,7 @@ async def nuevo_movimiento(request: Request, tarjeta_nombre: str):
     except Exception as e:
         print(f"Error: {e}")
         return HTMLResponse(content=f"Error al cargar: {str(e)}", status_code=500)
-
+        
 @app.post("/movimientos/guardar")
 async def guardar_movimiento(
     request: Request,
