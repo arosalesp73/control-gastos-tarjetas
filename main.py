@@ -102,6 +102,31 @@ async def guardar_tarjeta(
     except Exception as e:
         print(f"Error al guardar tarjeta: {e}")
         return HTMLResponse(content=f"Error al guardar tarjeta: {str(e)}", status_code=500)
+
+@app.get("/tarjetas/eliminar/{nombre_tarjeta}")
+async def eliminar_tarjeta(request: Request, nombre_tarjeta: str):
+    user = request.session.get("user")
+    if not user: return RedirectResponse(url="/login")
+
+    try:
+        # 1. Borramos los movimientos asociados a esa tarjeta y usuario
+        supabase.table("movimientos")\
+            .delete()\
+            .eq("tarjeta", nombre_tarjeta)\
+            .eq("usuario_id", user["id"])\
+            .execute()
+
+        # 2. Borramos la tarjeta
+        supabase.table("tarjetas")\
+            .delete()\
+            .eq("nombre_tarjeta", nombre_tarjeta)\
+            .eq("usuario_id", user["id"])\
+            .execute()
+        
+        return RedirectResponse(url="/", status_code=303)
+    except Exception as e:
+        print(f"Error al eliminar tarjeta: {e}")
+        return HTMLResponse(content=f"Error al eliminar: {str(e)}", status_code=500)
         
 # --- GESTIÓN DE MOVIMIENTOS (COMPRAS Y ABONOS) ---
 
