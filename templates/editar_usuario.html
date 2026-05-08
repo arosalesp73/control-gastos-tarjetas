@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editar Usuario</title>
+    <style>{{ css | safe }}</style>
+</head>
+<body>
+    <div style="padding: 20px; max-width: 500px; margin: auto;">
+        <div class="card">
+            <h2 style="color: var(--accent); margin-top: 0;">Editar Usuario</h2>
+            <form action="/admin/usuarios/actualizar" method="post">
+                <input type="hidden" name="id" value="{{ u_edit.id }}">
+                
+                <label>Nombre de Usuario:</label>
+                <input name="username" value="{{ u_edit.username }}" required>
+                
+                <label>Contraseña:</label>
+                <input name="password" value="{{ u_edit.password }}" required>
+                
+                <label>Rol:</label>
+                <select name="role">
+                    <option value="user" {% if u_edit.role == 'user' %}selected{% endif %}>Usuario Estándar</option>
+                    <option value="admin" {% if u_edit.role == 'admin' %}selected{% endif %}>Administrador</option>
+                </select>
+                
+                <div style="display: flex; gap: 10px; margin-top: 10px;">
+                    <button type="submit">Guardar Cambios</button>
+                    <a href="/admin/usuarios" style="flex: 1; text-align: center; padding: 14px; background: #333; color: white; text-decoration: none; border-radius: 10px; font-weight: bold;">Cancelar</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</body>
+</html>
