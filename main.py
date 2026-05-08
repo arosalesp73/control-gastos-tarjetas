@@ -268,3 +268,54 @@ async def crear_usuario(
     except Exception as e:
         print(f"Error al crear usuario: {e}")
         return HTMLResponse(content=f"Error al crear usuario: {str(e)}", status_code=500)
+
+# --- GENERACIÓN DE REPORTES ---
+
+@app.get("/reportes")
+async def descargar_reporte(request: Request):
+    user = request.session.get("user")
+    if not user: 
+        return RedirectResponse(url="/login")
+
+    try:
+        # 1. Obtener todos los movimientos del usuario ordenados por fecha
+        res = supabase.table("movimientos")\
+            .select("*")\
+            .eq("usuario_id", user["id"])\
+            .order("fecha", desc=True)\
+            .execute()
+        
+        if not res.data:
+            return HTMLResponse("No hay movimientos registrados para generar el reporte.")
+
+        # 2. Crear un DataFrame de Pandas con los datos
+        df = pd.DataFrame(res.data)
+        
+        # 3. Limpiar y renombrar columnas para el usuario
+        # Seleccionamos solo lo que nos sirve para el Excel
+        columnas_interes = ['fecha', 'tarjeta', 'concepto', 'tipo', 'monto']
+        df = df[columnas_interes]
+        
+        # Renombramos para que el Excel se vea profesional
+        df.columns = ['Fecha', 'Tarjeta', 'Concepto', 'Tipo', 'Monto ($)']
+
+        # 4. Generar el Excel en un "archivo virtual" en memoria
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            df.to_excel(writer, index=False, sheet_name='Mis Movimientos')
+        
+        output.seek(0) # Regresamos al inicio del archivo virtual
+        
+        # 5. Configurar el nombre del archivo con la fecha de hoy
+        fecha_str = datetime.now().strftime("%d-%m-%Y")
+        nombre_archivo = f"Reporte_Gastos_{fecha_str}.xlsx"
+
+        return StreamingResponse(
+            output, 
+            headers={'Content-Disposition': f'attachment; filename="{nombre_archivo}"'},
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        
+    except Exception as e:
+        print(f"Error al generar reporte: {e}")
+        return HTMLResponse(content=f"Error al generar Excel: {str(e)}", status_code=500)
