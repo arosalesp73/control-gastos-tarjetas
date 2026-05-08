@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editar Tarjeta</title>
+    <style>{{ css | safe }} .container { max-width: 400px; margin: 30px auto; padding: 20px; } .card { background: var(--surface); padding: 25px; border-radius: 12px; border: 1px solid #333; } label { display: block; margin-top: 15px; color: #aaa; font-size: 0.85em; } input { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #444; background: #0f0f1a; color: white; margin-top: 5px; box-sizing: border-box; } button { width: 100%; padding: 12px; background: #6c63ff; border: none; color: white; font-weight: bold; border-radius: 8px; cursor: pointer; margin-top: 20px; }</style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <h2>💳 Editar Tarjeta</h2>
+            <form action="/tarjetas/actualizar" method="post">
+                <input type="hidden" name="id" value="{{ tarjeta.id }}">
+                
+                <label>Nombre de la Tarjeta:</label>
+                <input type="text" name="nombre_tarjeta" value="{{ tarjeta.nombre_tarjeta }}" required>
+                
+                <label>Día de Corte:</label>
+                <input type="number" name="dia_corte" value="{{ tarjeta.dia_corte }}" min="1" max="31" required>
+                
+                <label>Día de Pago:</label>
+                <input type="number" name="dia_pago" value="{{ tarjeta.dia_pago }}" min="1" max="31" required>
+                
+                <button type="submit">Actualizar Datos</button>
+            </form>
+            <a href="/" style="display: block; text-align: center; margin-top: 20px; color: #666; text-decoration: none; font-size: 0.85em;">Cancelar</a>
+        </div>
+    </div>
+</body>
+</html>
