@@ -1,12 +1,15 @@
 import io
 import os
 import pandas as pd
+import httpx
+import asyncio
 from datetime import datetime
 from fastapi import FastAPI, Form, Request, HTTPException, Depends
 from fastapi.responses import HTMLResponse, StreamingResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
 from supabase import create_client, Client
+from apscheduler.schedulers.background import BackgroundScheduler
 
 app = FastAPI()
 
@@ -23,7 +26,26 @@ supabase: Client = create_client(
     os.environ.get("SUPABASE_KEY")
 )
 
-# --- CONFIGURACIÓN VISUAL MEJORADA ---
+# --- LÓGICA PARA EVITAR REPOSO (KEEP ALIVE) ---
+
+def self_ping():
+    """Función que hace una petición a la propia app para mantenerla despierta"""
+    url = os.environ.get("RENDER_EXTERNAL_URL")
+    if url:
+        try:
+            # Usamos httpx para hacer un ping rápido a la pantalla de login
+            with httpx.Client() as client:
+                client.get(f"{url}/login")
+                print(f"Ping de auto-despertado exitoso a las {datetime.now()}")
+        except Exception as e:
+            print(f"Error en self-ping: {e}")
+
+# Configuramos el programador para que corra cada 12 minutos
+scheduler = BackgroundScheduler()
+scheduler.add_job(self_ping, 'interval', minutes=12)
+scheduler.start()
+
+# --- CONFIGURACIÓN VISUAL ---
 
 DARK_CSS = """
 :root { 
@@ -86,16 +108,11 @@ async def inicio(request: Request):
             "css": DARK_CSS
         }))
     except Exception as e:
-        print(f"Error en inicio: {e}")
         return HTMLResponse(content=f"Error de sistema: {str(e)}", status_code=500)
-
-# --- SISTEMA DE AUTENTICACIÓN ---
 
 @app.get("/login", response_class=HTMLResponse)
 async def login_ui(request: Request, error: str = None):
-    # Si hay un error, mostramos un mensaje visual
     err_html = f'<div style="color:#ff4e4e; margin-bottom:15px; text-align:center; font-size:0.9em; background:rgba(255,78,78,0.1); padding:10px; border-radius:8px;">⚠️ Usuario o contraseña incorrectos</div>' if error else ""
-    
     return f"""
     <!DOCTYPE html>
     <html lang="es">
@@ -105,24 +122,9 @@ async def login_ui(request: Request, error: str = None):
         <title>Login - Control de Gastos</title>
         <style>
             {DARK_CSS}
-            .login-container {{
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                height: 100vh;
-                padding: 20px;
-                box-sizing: border-box;
-            }}
-            .login-card {{
-                width: 100%;
-                max-width: 380px;
-                text-align: center;
-            }}
-            .logo-icon {{
-                font-size: 3.5em;
-                margin-bottom: 15px;
-                display: block;
-            }}
+            .login-container {{ display: flex; justify-content: center; align-items: center; height: 100vh; padding: 20px; box-sizing: border-box; }}
+            .login-card {{ width: 100%; max-width: 380px; text-align: center; }}
+            .logo-icon {{ font-size: 3.5em; margin-bottom: 15px; display: block; }}
         </style>
     </head>
     <body>
@@ -132,11 +134,10 @@ async def login_ui(request: Request, error: str = None):
                 <h2 style="margin-bottom: 25px; color: #fff;">Mis Finanzas</h2>
                 {err_html}
                 <form action="/login" method="post">
-                    <input name="username" placeholder="Nombre de usuario" required autocomplete="username">
-                    <input name="password" type="password" placeholder="Contraseña" required autocomplete="current-password">
+                    <input name="username" placeholder="Usuario" required>
+                    <input name="password" type="password" placeholder="Contraseña" required>
                     <button type="submit">Entrar al Sistema</button>
                 </form>
-                <p style="margin-top: 30px; color: #555; font-size: 0.8em; letter-spacing: 1px;">SISTEMA DE CONTROL PRIVADO</p>
             </div>
         </div>
     </body>
@@ -149,7 +150,6 @@ async def login(request: Request, username: str = Form(...), password: str = For
     if res.data:
         request.session["user"] = res.data[0]
         return RedirectResponse("/", status_code=303)
-    # Si falla, mandamos el parámetro de error
     return RedirectResponse("/login?error=1", status_code=303)
 
 @app.get("/logout")
@@ -170,34 +170,22 @@ async def formulario_tarjeta(request: Request):
 async def guardar_tarjeta(request: Request, nombre_tarjeta: str = Form(...), dia_corte: int = Form(...), dia_pago: int = Form(...)):
     user = request.session.get("user")
     if not user: return RedirectResponse(url="/login")
-    try:
-        supabase.table("tarjetas").insert({
-            "nombre_tarjeta": nombre_tarjeta.strip(),
-            "usuario_id": user["id"],
-            "dia_corte": dia_corte,
-            "dia_pago": dia_pago
-        }).execute()
-        return RedirectResponse(url="/", status_code=303)
-    except Exception as e:
-        return HTMLResponse(content=f"Error al guardar: {str(e)}", status_code=500)
+    supabase.table("tarjetas").insert({"nombre_tarjeta": nombre_tarjeta.strip(), "usuario_id": user["id"], "dia_corte": dia_corte, "dia_pago": dia_pago}).execute()
+    return RedirectResponse(url="/", status_code=303)
 
 @app.get("/tarjetas/eliminar/{nombre_tarjeta}")
 async def eliminar_tarjeta(request: Request, nombre_tarjeta: str):
     user = request.session.get("user")
     if not user: return RedirectResponse(url="/login")
-    try:
-        supabase.table("movimientos").delete().eq("tarjeta", nombre_tarjeta).eq("usuario_id", user["id"]).execute()
-        supabase.table("tarjetas").delete().eq("nombre_tarjeta", nombre_tarjeta).eq("usuario_id", user["id"]).execute()
-        return RedirectResponse(url="/", status_code=303)
-    except Exception as e:
-        return HTMLResponse(content=f"Error al eliminar: {str(e)}", status_code=500)
+    supabase.table("movimientos").delete().eq("tarjeta", nombre_tarjeta).eq("usuario_id", user["id"]).execute()
+    supabase.table("tarjetas").delete().eq("nombre_tarjeta", nombre_tarjeta).eq("usuario_id", user["id"]).execute()
+    return RedirectResponse(url="/", status_code=303)
 
 @app.get("/tarjetas/editar/{nombre_tarjeta}", response_class=HTMLResponse)
 async def editar_tarjeta_ui(request: Request, nombre_tarjeta: str):
     user = request.session.get("user")
     if not user: return RedirectResponse(url="/login")
     res = supabase.table("tarjetas").select("*").eq("nombre_tarjeta", nombre_tarjeta).eq("usuario_id", user["id"]).execute()
-    if not res.data: return HTMLResponse("No encontrada", status_code=404)
     template = templates.get_template("editar_tarjeta.html")
     return HTMLResponse(content=template.render({"request": request, "tarjeta": res.data[0], "css": DARK_CSS}))
 
@@ -205,15 +193,8 @@ async def editar_tarjeta_ui(request: Request, nombre_tarjeta: str):
 async def actualizar_tarjeta(request: Request, id: int = Form(...), nombre_tarjeta: str = Form(...), dia_corte: int = Form(...), dia_pago: int = Form(...)):
     user = request.session.get("user")
     if not user: return RedirectResponse(url="/login")
-    try:
-        supabase.table("tarjetas").update({
-            "nombre_tarjeta": nombre_tarjeta.strip(),
-            "dia_corte": dia_corte,
-            "dia_pago": dia_pago
-        }).eq("id", id).eq("usuario_id", user["id"]).execute()
-        return RedirectResponse(url="/", status_code=303)
-    except Exception as e:
-        return HTMLResponse(content=f"Error: {str(e)}", status_code=500)
+    supabase.table("tarjetas").update({"nombre_tarjeta": nombre_tarjeta.strip(), "dia_corte": dia_corte, "dia_pago": dia_pago}).eq("id", id).execute()
+    return RedirectResponse(url="/", status_code=303)
 
 # --- GESTIÓN DE MOVIMIENTOS ---
 
@@ -221,42 +202,17 @@ async def actualizar_tarjeta(request: Request, id: int = Form(...), nombre_tarje
 async def nuevo_movimiento(request: Request, tarjeta_nombre: str):
     user = request.session.get("user")
     if not user: return RedirectResponse(url="/login")
-    try:
-        res = supabase.table("movimientos").select("*").eq("tarjeta", tarjeta_nombre).eq("usuario_id", user["id"]).order("id", desc=True).limit(5).execute()
-        template = templates.get_template("registrar_movimiento.html")
-        return HTMLResponse(content=template.render({"request": request, "nombre_tarjeta": tarjeta_nombre, "movimientos": res.data, "css": DARK_CSS}))
-    except Exception as e:
-        return HTMLResponse(content=f"Error: {str(e)}", status_code=500)
+    res = supabase.table("movimientos").select("*").eq("tarjeta", tarjeta_nombre).eq("usuario_id", user["id"]).order("id", desc=True).limit(5).execute()
+    template = templates.get_template("registrar_movimiento.html")
+    return HTMLResponse(content=template.render({"request": request, "nombre_tarjeta": tarjeta_nombre, "movimientos": res.data, "css": DARK_CSS}))
 
 @app.post("/movimientos/guardar")
 async def guardar_movimiento(request: Request, tarjeta_nombre: str = Form(...), concepto: str = Form(...), monto: float = Form(...), tipo_movimiento: str = Form(...), fecha: str = Form(...)):
     user = request.session.get("user")
     if not user: return RedirectResponse(url="/login")
     monto_final = monto * -1 if tipo_movimiento == 'abono' else monto
-    try:
-        supabase.table("movimientos").insert({"tarjeta": tarjeta_nombre.strip(), "concepto": concepto, "monto": monto_final, "fecha": fecha, "usuario_id": user["id"], "tipo": tipo_movimiento}).execute()
-        return RedirectResponse(url=f"/movimientos/nuevo/{tarjeta_nombre}", status_code=303)
-    except Exception as e:
-        return HTMLResponse(content=f"Error: {str(e)}", status_code=500)
-
-@app.get("/movimientos/editar/{movimiento_id}", response_class=HTMLResponse)
-async def editar_movimiento_ui(request: Request, movimiento_id: int):
-    user = request.session.get("user")
-    if not user: return RedirectResponse(url="/login")
-    res = supabase.table("movimientos").select("*").eq("id", movimiento_id).eq("usuario_id", user["id"]).execute()
-    if not res.data: return HTMLResponse("No encontrado", status_code=404)
-    template = templates.get_template("editar_movimiento.html")
-    return HTMLResponse(content=template.render({"request": request, "movimiento": res.data[0], "css": DARK_CSS}))
-
-@app.post("/movimientos/actualizar")
-async def actualizar_movimiento(request: Request, id: int = Form(...), concepto: str = Form(...), monto: float = Form(...), fecha: str = Form(...), tarjeta: str = Form(...)):
-    user = request.session.get("user")
-    if not user: return RedirectResponse(url="/login")
-    try:
-        supabase.table("movimientos").update({"concepto": concepto, "monto": monto, "fecha": fecha}).eq("id", id).eq("usuario_id", user["id"]).execute()
-        return RedirectResponse(url=f"/movimientos/nuevo/{tarjeta}", status_code=303)
-    except Exception as e:
-        return HTMLResponse(content=f"Error: {str(e)}", status_code=500)
+    supabase.table("movimientos").insert({"tarjeta": tarjeta_nombre.strip(), "concepto": concepto, "monto": monto_final, "fecha": fecha, "usuario_id": user["id"], "tipo": tipo_movimiento}).execute()
+    return RedirectResponse(url=f"/movimientos/nuevo/{tarjeta_nombre}", status_code=303)
 
 # --- ADMINISTRACIÓN DE USUARIOS ---
 
@@ -289,26 +245,15 @@ async def configurar_reporte_ui(request: Request):
 async def generar_reporte_excel(request: Request, tarjeta: str, fecha_inicio: str, fecha_fin: str):
     user = request.session.get("user")
     if not user: return RedirectResponse(url="/login")
-    try:
-        query = supabase.table("movimientos").select("*").eq("usuario_id", user["id"]).gte("fecha", fecha_inicio).lte("fecha", fecha_fin)
-        if tarjeta != "TODAS": query = query.eq("tarjeta", tarjeta)
-        res = query.order("id", asc=True).execute()
-        if not res.data: return HTMLResponse("No hay movimientos.")
-        
-        df = pd.DataFrame(res.data)[['fecha', 'tarjeta', 'concepto', 'tipo', 'monto']]
-        df.columns = ['Fecha', 'Tarjeta', 'Concepto', 'Tipo', 'Monto']
-        
-        output = io.BytesIO()
-        with pd.ExcelWriter(output, engine='openpyxl') as writer:
-            df.to_excel(writer, index=False, sheet_name='Reporte')
-            ws = writer.sheets['Reporte']
-            for row in range(2, len(df) + 2):
-                ws.cell(row=row, column=5).number_format = '$#,##0.00'
-            for col in ws.columns:
-                ws.column_dimensions[col[0].column_letter].width = max(len(str(c.value) or "") for c in col) + 5
-        
-        output.seek(0)
-        tag = tarjeta.replace(" ", "_") if tarjeta != "TODAS" else "GENERAL"
-        return StreamingResponse(output, headers={'Content-Disposition': f'attachment; filename="Reporte_{tag}_{fecha_inicio}.xlsx"'}, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-    except Exception as e:
-        return HTMLResponse(content=f"Error: {str(e)}", status_code=500)
+    query = supabase.table("movimientos").select("*").eq("usuario_id", user["id"]).gte("fecha", fecha_inicio).lte("fecha", fecha_fin)
+    if tarjeta != "TODAS": query = query.eq("tarjeta", tarjeta)
+    res = query.order("id", asc=True).execute()
+    if not res.data: return HTMLResponse("No hay movimientos.")
+    
+    df = pd.DataFrame(res.data)[['fecha', 'tarjeta', 'concepto', 'tipo', 'monto']]
+    df.columns = ['Fecha', 'Tarjeta', 'Concepto', 'Tipo', 'Monto']
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False, sheet_name='Reporte')
+    output.seek(0)
+    return StreamingResponse(output, headers={'Content-Disposition': f'attachment; filename="Reporte.xlsx"'}, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
