@@ -301,7 +301,7 @@ async def generar_reporte_excel(
         if tarjeta != "TODAS":
             query = query.eq("tarjeta", tarjeta)
 
-        res = query.order("id", desc=True).execute()
+        res = query.order("id", asc=True).execute()
 
         if not res.data:
             return HTMLResponse("No hay movimientos en este rango de fechas.")
