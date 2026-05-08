@@ -293,32 +293,47 @@ async def generar_reporte_excel(
     if not user: return RedirectResponse(url="/login")
 
     try:
-        # 1. Construir la consulta base
         query = supabase.table("movimientos").select("*")\
             .eq("usuario_id", user["id"])\
             .gte("fecha", fecha_inicio)\
             .lte("fecha", fecha_fin)
 
-        # 2. Filtrar por tarjeta si no eligió "TODAS"
         if tarjeta != "TODAS":
             query = query.eq("tarjeta", tarjeta)
 
         res = query.order("id", desc=True).execute()
 
         if not res.data:
-            return HTMLResponse("No hay movimientos en este rango de fechas para la selección.")
+            return HTMLResponse("No hay movimientos en este rango de fechas.")
 
-        # 3. Procesar con Pandas
         df = pd.DataFrame(res.data)
         df = df[['fecha', 'tarjeta', 'concepto', 'tipo', 'monto']]
-        df.columns = ['Fecha', 'Tarjeta', 'Concepto', 'Tipo', 'Monto ($)']
+        df.columns = ['Fecha', 'Tarjeta', 'Concepto', 'Tipo', 'Monto']
 
         output = io.BytesIO()
+        # Creamos el Excel con un formato más avanzado
         with pd.ExcelWriter(output, engine='openpyxl') as writer:
             df.to_excel(writer, index=False, sheet_name='Reporte')
+            
+            workbook = writer.book
+            worksheet = writer.sheets['Reporte']
+
+            # 1. Definimos el formato de moneda ($#,##0.00)
+            formato_moneda = '$#,##0.00'
+            
+            # 2. Aplicar formato a la columna E (Monto) y ajustar anchos
+            # Las columnas en Excel son: A(Fecha), B(Tarjeta), C(Concepto), D(Tipo), E(Monto)
+            for row in range(2, len(df) + 2):  # Empezamos en la fila 2 por el encabezado
+                celda_monto = worksheet.cell(row=row, column=5)
+                celda_monto.number_format = formato_moneda
+
+            # 3. Ajustar automáticamente el ancho de las columnas para que no se corten
+            for column_cells in worksheet.columns:
+                length = max(len(str(cell.value) or "") for cell in column_cells)
+                worksheet.column_dimensions[column_cells[0].column_letter].width = length + 5
+
         output.seek(0)
 
-        # 4. Nombre del archivo personalizado con el ID de la tarjeta
         tag_tarjeta = tarjeta.replace(" ", "_") if tarjeta != "TODAS" else "GENERAL"
         nombre_final = f"Reporte_{tag_tarjeta}_{fecha_inicio}_al_{fecha_fin}.xlsx"
 
@@ -328,4 +343,5 @@ async def generar_reporte_excel(
             media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
     except Exception as e:
+        print(f"Error en reporte: {e}")
         return HTMLResponse(content=f"Error: {str(e)}", status_code=500)
