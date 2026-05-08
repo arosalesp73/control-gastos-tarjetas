@@ -10,14 +10,38 @@
         .nav-link { color: #e0e0f0; text-decoration: none; font-weight: 500; }
         .nav-link:hover { color: #6c63ff; }
         .admin-tag { background: #6c63ff; color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.8em; margin-left: 10px; }
-        .grid-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 40px; }
         
-        /* Estilo para que la tarjeta parezca un botón */
-        .card-link { text-decoration: none; color: inherit; display: block; transition: transform 0.2s; }
-        .card-link:hover { transform: translateY(-5px); }
+        /* Contenedor de rejilla corregido */
+        .grid-container { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); 
+            gap: 20px; 
+            margin-bottom: 40px; 
+        }
         
-        .card { background: var(--surface); padding: 25px; border-radius: 12px; border: 1px solid #333; height: 100%; box-sizing: border-box; }
-        .btn-plus { display: flex; align-items: center; justify-content: center; text-decoration: none; border: 2px dashed #444; background: transparent; color: #666; font-size: 2em; min-height: 120px; }
+        .card-tarjeta { 
+            background: var(--surface); 
+            padding: 20px; 
+            border-radius: 15px; 
+            border: 1px solid #333; 
+            height: 100%; 
+            box-sizing: border-box; 
+            transition: transform 0.2s, border-color 0.2s;
+        }
+        .card-tarjeta:hover { transform: translateY(-5px); border-color: var(--accent); }
+        
+        .btn-plus { 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            text-decoration: none; 
+            border: 2px dashed #444; 
+            background: transparent; 
+            color: #666; 
+            font-size: 2.5em; 
+            border-radius: 15px;
+            min-height: 150px; 
+        }
         .btn-plus:hover { border-color: #6c63ff; color: #6c63ff; }
     </style>
 </head>
@@ -36,19 +60,26 @@
     </nav>
 
     <h2>Mis Tarjetas</h2>
-    <p style="color: #666; margin-bottom: 20px;">Selecciona una tarjeta para registrar un movimiento (Compra o Abono):</p>
+    <p style="color: #666; margin-bottom: 20px;">Selecciona una tarjeta para registrar un movimiento:</p>
     
     <div class="grid-container">
-        {% for t in tarjetas %}
-        <a href="/movimientos/nuevo/{{ t.nombre_tarjeta }}" class="card-link">
-            <div class="card">
-                <h3 style="margin:0; color: #6c63ff;">{{ t.nombre_tarjeta }}</h3>
-                <p style="color: #666; margin-top: 15px; font-size: 0.9em;">➕ Registrar Movimiento</p>
+        {% for tarjeta in tarjetas %}
+        <a href="/movimientos/nuevo/{{ tarjeta.nombre_tarjeta }}" style="text-decoration: none; color: inherit;">
+            <div class="card-tarjeta">
+                <h3 style="margin: 0 0 10px 0; color: var(--accent);">💳 {{ tarjeta.nombre_tarjeta }}</h3>
+                
+                <p style="margin: 5px 0; font-size: 0.85em; color: #bbb;">
+                    📅 <strong>Fecha de corte:</strong> los {{ tarjeta.dia_corte }}
+                </p>
+                
+                <p style="margin: 5px 0; font-size: 0.85em; color: #bbb;">
+                    🔔 <strong>Límite de pago:</strong> los {{ tarjeta.dia_pago }}
+                </p>
             </div>
         </a>
         {% endfor %}
-        
-        <a href="/tarjetas/nueva" class="card btn-plus">
+
+        <a href="/tarjetas/nueva" class="btn-plus">
             <span>+</span>
         </a>
     </div>
