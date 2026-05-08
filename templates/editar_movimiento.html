@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editar Registro</title>
+    <style>{{ css | safe }} .container { max-width: 400px; margin: 30px auto; padding: 20px; } .card { background: var(--surface); padding: 25px; border-radius: 12px; border: 1px solid #444; } input { width: 100%; padding: 12px; margin-top: 5px; background: #0f0f1a; color: white; border: 1px solid #444; border-radius: 8px; box-sizing: border-box; } button { width: 100%; padding: 12px; margin-top: 15px; background: #6c63ff; border: none; color: white; font-weight: bold; border-radius: 8px; cursor: pointer; }</style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <h2>✏️ Editar Registro</h2>
+            <form action="/movimientos/actualizar" method="post">
+                <input type="hidden" name="id" value="{{ movimiento.id }}">
+                <input type="hidden" name="tarjeta" value="{{ movimiento.tarjeta }}">
+                
+                <label>Concepto:</label>
+                <input type="text" name="concepto" value="{{ movimiento.concepto }}" required>
+                
+                <label>Monto ($):</label>
+                <input type="number" step="0.01" name="monto" value="{{ movimiento.monto }}" required>
+                
+                <label>Fecha:</label>
+                <input type="date" name="fecha" value="{{ movimiento.fecha }}" required style="color-scheme: dark;">
+                
+                <button type="submit">Guardar Cambios</button>
+            </form>
+            <a href="/movimientos/nuevo/{{ movimiento.tarjeta }}" style="display: block; text-align: center; margin-top: 15px; color: #666; text-decoration: none;">Cancelar</a>
+        </div>
+    </div>
+</body>
+</html>
