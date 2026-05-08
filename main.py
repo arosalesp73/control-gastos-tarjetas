@@ -8,46 +8,32 @@ from fastapi.responses import HTMLResponse, StreamingResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
 from supabase import create_client, Client
-from apscheduler.schedulers.background import BackgroundScheduler
 
 app = FastAPI()
-
-# Middleware de sesión
 app.add_middleware(SessionMiddleware, secret_key=os.environ.get("SESSION_SECRET", "12345"))
-
-# Configuración de templates
 templates = Jinja2Templates(directory="templates")
 
-# Conexión Supabase
-supabase: Client = create_client(
-    os.environ.get("SUPABASE_URL"), 
-    os.environ.get("SUPABASE_KEY")
-)
+supabase: Client = create_client(os.environ.get("SUPABASE_URL"), os.environ.get("SUPABASE_KEY"))
 
-# --- ESTILOS ---
 DARK_CSS = """
-:root { --bg: #0e0e1a; --surface: #181828; --accent: #6c63ff; --text: #e0e0f0; --input-bg: #0f0f1a; } 
-body { background-color: var(--bg); background-image: url('https://www.transparenttextures.com/patterns/carbon-fibre.png'), linear-gradient(rgba(14, 14, 26, 0.95), rgba(14, 14, 26, 0.95)); background-attachment: fixed; color: var(--text); font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; min-height: 100vh; }
-.card { background: var(--surface); padding: 30px; border-radius: 16px; border: 1px solid #333; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-input, select { width: 100%; padding: 14px; border-radius: 10px; border: 1px solid #444; background: var(--input-bg); color: white; margin-bottom: 15px; box-sizing: border-box; font-size: 16px; }
-button { width: 100%; padding: 14px; background: var(--accent); border: none; color: white; font-weight: bold; border-radius: 10px; cursor: pointer; font-size: 16px; }
+:root { --bg: #0e0e1a; --surface: #181828; --accent: #6c63ff; --text: #e0e0f0; } 
+body { background-color: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; margin: 0; }
+.card { background: var(--surface); padding: 20px; border-radius: 12px; border: 1px solid #333; }
+input, select { width: 100%; padding: 10px; margin-bottom: 10px; border-radius: 5px; border: 1px solid #444; background: #0f0f1a; color: white; }
+button { width: 100%; padding: 10px; background: var(--accent); border: none; color: white; border-radius: 5px; cursor: pointer; }
 """
 
-# --- RUTAS DE INICIO Y LOGIN ---
-
+# --- INICIO Y LOGIN ---
 @app.get("/", response_class=HTMLResponse)
 async def inicio(request: Request):
     user = request.session.get("user")
-    if not user: return RedirectResponse(url="/login")
+    if not user: return RedirectResponse("/login")
     res = supabase.table("tarjetas").select("*").eq("usuario_id", user["id"]).execute()
     return templates.TemplateResponse("index.html", {"request": request, "user": user, "tarjetas": res.data, "css": DARK_CSS})
 
 @app.get("/login", response_class=HTMLResponse)
-async def login_ui(request: Request, error: str = None):
-    err_msg = ""
-    if error: err_msg = '<div style="color:#ff4e4e; text-align:center; margin-bottom:15px;">⚠️ Acceso denegado</div>'
-    html = f"""<html><head><meta name="viewport" content="width=device-width, initial-scale=1.0"><style>{DARK_CSS}</style></head><body><div style="display:flex; justify-content:center; align-items:center; height:100vh; padding:20px;"><div class="card" style="width:100%; max-width:350px; text-align:center;"><h2>Mis Finanzas</h2>{err_msg}<form action="/login" method="post"><input name="username" placeholder="Usuario" required><input name="password" type="password" placeholder="Contraseña" required><button type="submit">Entrar</button></form></div></div></body></html>"""
-    return HTMLResponse(content=html)
+async def login_ui(request: Request):
+    return templates.TemplateResponse("login.html", {"request": request, "css": DARK_CSS})
 
 @app.post("/login")
 async def login(request: Request, username: str = Form(...), password: str = Form(...)):
@@ -55,83 +41,62 @@ async def login(request: Request, username: str = Form(...), password: str = For
     if res.data:
         request.session["user"] = res.data[0]
         return RedirectResponse("/", status_code=303)
-    return RedirectResponse("/login?error=1", status_code=303)
+    return RedirectResponse("/login")
 
 @app.get("/logout")
 async def logout(request: Request):
     request.session.clear()
     return RedirectResponse("/login")
 
-# --- GESTIÓN DE TARJETAS (NUEVA / GUARDAR / ELIMINAR) ---
+# --- GESTIÓN DE TARJETAS (EL LÁPIZ Y EL BOTE) ---
 
-@app.get("/tarjetas/nueva", response_class=HTMLResponse)
-async def f_tarjeta(request: Request):
+@app.get("/tarjetas/editar/{nombre}", response_class=HTMLResponse)
+async def f_editar_tarjeta(request: Request, nombre: str):
     user = request.session.get("user")
     if not user: return RedirectResponse("/login")
-    return templates.TemplateResponse("nueva_tarjeta.html", {"request": request, "user": user, "css": DARK_CSS})
+    res = supabase.table("tarjetas").select("*").eq("nombre_tarjeta", nombre).eq("usuario_id", user["id"]).execute()
+    if not res.data: return RedirectResponse("/")
+    return templates.TemplateResponse("editar_tarjeta.html", {"request": request, "tarjeta": res.data[0], "css": DARK_CSS})
 
-@app.post("/tarjetas/guardar")
-async def g_tarjeta(request: Request, nombre_tarjeta: str = Form(...), dia_corte: int = Form(...), dia_pago: int = Form(...)):
+@app.post("/tarjetas/actualizar")
+async def actualizar_tarjeta(request: Request, id_tarjeta: int = Form(...), nombre_tarjeta: str = Form(...), dia_corte: int = Form(...), dia_pago: int = Form(...)):
     user = request.session.get("user")
-    if not user: return RedirectResponse("/login")
-    supabase.table("tarjetas").insert({
+    supabase.table("tarjetas").update({
         "nombre_tarjeta": nombre_tarjeta, 
-        "usuario_id": user["id"], 
         "dia_corte": dia_corte, 
         "dia_pago": dia_pago
-    }).execute()
+    }).eq("id", id_tarjeta).eq("usuario_id", user["id"]).execute()
     return RedirectResponse("/", status_code=303)
 
 @app.get("/tarjetas/eliminar/{nombre}")
-async def e_tarjeta(request: Request, nombre: str):
+async def eliminar_tarjeta(request: Request, nombre: str):
     user = request.session.get("user")
-    if not user: return RedirectResponse("/login")
-    # Eliminamos movimientos asociados primero para evitar errores de llave foránea
     supabase.table("movimientos").delete().eq("tarjeta", nombre).eq("usuario_id", user["id"]).execute()
     supabase.table("tarjetas").delete().eq("nombre_tarjeta", nombre).eq("usuario_id", user["id"]).execute()
     return RedirectResponse("/", status_code=303)
 
-# --- MOVIMIENTOS (NUEVO / GUARDAR) ---
-
+# --- MOVIMIENTOS ---
 @app.get("/movimientos/nuevo/{tarjeta}", response_class=HTMLResponse)
 async def n_mov(request: Request, tarjeta: str):
     user = request.session.get("user")
-    if not user: return RedirectResponse("/login")
     res = supabase.table("movimientos").select("*").eq("tarjeta", tarjeta).eq("usuario_id", user["id"]).order("id", desc=True).limit(5).execute()
-    return templates.TemplateResponse("registrar_movimiento.html", {
-        "request": request, 
-        "nombre_tarjeta": tarjeta, 
-        "movimientos": res.data, 
-        "css": DARK_CSS
-    })
+    return templates.TemplateResponse("registrar_movimiento.html", {"request": request, "nombre_tarjeta": tarjeta, "movimientos": res.data, "css": DARK_CSS})
 
 @app.post("/movimientos/guardar")
 async def g_mov(request: Request, tarjeta_nombre: str = Form(...), concepto: str = Form(...), monto: float = Form(...), tipo_movimiento: str = Form(...), fecha: str = Form(...)):
     user = request.session.get("user")
-    if not user: return RedirectResponse("/login")
     monto_f = monto * -1 if tipo_movimiento == 'abono' else monto
-    supabase.table("movimientos").insert({
-        "tarjeta": tarjeta_nombre, 
-        "concepto": concepto, 
-        "monto": monto_f, 
-        "fecha": fecha, 
-        "usuario_id": user["id"], 
-        "tipo": tipo_movimiento
-    }).execute()
+    supabase.table("movimientos").insert({"tarjeta": tarjeta_nombre, "concepto": concepto, "monto": monto_f, "fecha": fecha, "usuario_id": user["id"], "tipo": tipo_movimiento}).execute()
     return RedirectResponse(f"/movimientos/nuevo/{tarjeta_nombre}", status_code=303)
 
-# --- REPORTES Y ADMINISTRACIÓN ---
-
-@app.get("/reportes", response_class=HTMLResponse)
-async def rep_ui(request: Request):
+# --- REPORTES EXCEL ---
+@app.get("/reportes/excel")
+async def reporte_excel(request: Request):
     user = request.session.get("user")
-    if not user: return RedirectResponse("/login")
-    res = supabase.table("tarjetas").select("nombre_tarjeta").eq("usuario_id", user["id"]).execute()
-    return templates.TemplateResponse("reportes.html", {"request": request, "tarjetas": res.data, "css": DARK_CSS})
-
-@app.get("/admin/usuarios", response_class=HTMLResponse)
-async def g_usuarios(request: Request):
-    user = request.session.get("user")
-    if not user or user.get("role") != 'admin': return RedirectResponse("/")
-    res = supabase.table("usuarios").select("*").execute()
-    return templates.TemplateResponse("usuarios.html", {"request": request, "user": user, "lista_usuarios": res.data, "css": DARK_CSS})
+    res = supabase.table("movimientos").select("*").eq("usuario_id", user["id"]).execute()
+    df = pd.DataFrame(res.data)
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False, sheet_name='Movimientos')
+    output.seek(0)
+    return StreamingResponse(output, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", headers={"Content-Disposition": "attachment; filename=mis_gastos.xlsx"})
