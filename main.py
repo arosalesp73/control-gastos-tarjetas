@@ -269,53 +269,63 @@ async def crear_usuario(
         print(f"Error al crear usuario: {e}")
         return HTMLResponse(content=f"Error al crear usuario: {str(e)}", status_code=500)
 
-# --- GENERACIÓN DE REPORTES ---
+# --- GENERACIÓN DE REPORTES FILTRADOS ---
 
-@app.get("/reportes")
-async def descargar_reporte(request: Request):
+@app.get("/reportes", response_class=HTMLResponse)
+async def configurar_reporte_ui(request: Request):
     user = request.session.get("user")
-    if not user: 
-        return RedirectResponse(url="/login")
+    if not user: return RedirectResponse(url="/login")
+    
+    # Traemos las tarjetas del usuario para el selector
+    tarjetas = supabase.table("tarjetas").select("nombre_tarjeta").eq("usuario_id", user["id"]).execute().data
+    
+    template = templates.get_template("reportes.html")
+    return HTMLResponse(content=template.render({"request": request, "tarjetas": tarjetas, "css": DARK_CSS}))
+
+@app.get("/reportes/generar")
+async def generar_reporte_excel(
+    request: Request,
+    tarjeta: str,
+    fecha_inicio: str,
+    fecha_fin: str
+):
+    user = request.session.get("user")
+    if not user: return RedirectResponse(url="/login")
 
     try:
-        # 1. Obtener todos los movimientos del usuario ordenados por fecha
-        res = supabase.table("movimientos")\
-            .select("*")\
+        # 1. Construir la consulta base
+        query = supabase.table("movimientos").select("*")\
             .eq("usuario_id", user["id"])\
-            .order("fecha", desc=True)\
-            .execute()
-        
-        if not res.data:
-            return HTMLResponse("No hay movimientos registrados para generar el reporte.")
+            .gte("fecha", fecha_inicio)\
+            .lte("fecha", fecha_fin)
 
-        # 2. Crear un DataFrame de Pandas con los datos
+        # 2. Filtrar por tarjeta si no eligió "TODAS"
+        if tarjeta != "TODAS":
+            query = query.eq("tarjeta", tarjeta)
+
+        res = query.order("id", desc=True).execute()
+
+        if not res.data:
+            return HTMLResponse("No hay movimientos en este rango de fechas para la selección.")
+
+        # 3. Procesar con Pandas
         df = pd.DataFrame(res.data)
-        
-        # 3. Limpiar y renombrar columnas para el usuario
-        # Seleccionamos solo lo que nos sirve para el Excel
-        columnas_interes = ['fecha', 'tarjeta', 'concepto', 'tipo', 'monto']
-        df = df[columnas_interes]
-        
-        # Renombramos para que el Excel se vea profesional
+        df = df[['fecha', 'tarjeta', 'concepto', 'tipo', 'monto']]
         df.columns = ['Fecha', 'Tarjeta', 'Concepto', 'Tipo', 'Monto ($)']
 
-        # 4. Generar el Excel en un "archivo virtual" en memoria
         output = io.BytesIO()
         with pd.ExcelWriter(output, engine='openpyxl') as writer:
-            df.to_excel(writer, index=False, sheet_name='Mis Movimientos')
-        
-        output.seek(0) # Regresamos al inicio del archivo virtual
-        
-        # 5. Configurar el nombre del archivo con la fecha de hoy
-        fecha_str = datetime.now().strftime("%d-%m-%Y")
-        nombre_archivo = f"Reporte_Gastos_{fecha_str}.xlsx"
+            df.to_excel(writer, index=False, sheet_name='Reporte')
+        output.seek(0)
+
+        # 4. Nombre del archivo personalizado con el ID de la tarjeta
+        tag_tarjeta = tarjeta.replace(" ", "_") if tarjeta != "TODAS" else "GENERAL"
+        nombre_final = f"Reporte_{tag_tarjeta}_{fecha_inicio}_al_{fecha_fin}.xlsx"
 
         return StreamingResponse(
-            output, 
-            headers={'Content-Disposition': f'attachment; filename="{nombre_archivo}"'},
+            output,
+            headers={'Content-Disposition': f'attachment; filename="{nombre_final}"'},
             media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
-        
     except Exception as e:
-        print(f"Error al generar reporte: {e}")
-        return HTMLResponse(content=f"Error al generar Excel: {str(e)}", status_code=500)
+        return HTMLResponse(content=f"Error: {str(e)}", status_code=500)
