@@ -1,9 +1,11 @@
 fastapi
 uvicorn
+supabase
 jinja2
 python-multipart
-supabase
-pandas
-starlette
 itsdangerous
+starlette
+pandas
 openpyxl
+apscheduler
+httpx
