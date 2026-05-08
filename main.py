@@ -71,24 +71,46 @@ async def rep_ui(request: Request):
     res = supabase.table("tarjetas").select("nombre_tarjeta").eq("usuario_id", user["id"]).execute()
     return templates.TemplateResponse("reportes.html", {"request": request, "tarjetas": res.data, "css": DARK_CSS})
 
+@app.get("/reportes/generar")
 @app.get("/reportes/excel")
-@app.get("/descargar_reporte")
-async def generar_excel(request: Request):
+async def generar_excel(
+    request: Request, 
+    tarjeta: str = "TODAS", 
+    fecha_inicio: str = None, 
+    fecha_fin: str = None
+):
     user = request.session.get("user")
     if not user: return RedirectResponse("/login")
-    res = supabase.table("movimientos").select("*").eq("usuario_id", user["id"]).execute()
-    if not res.data: return RedirectResponse("/reportes")
     
+    # Iniciamos la consulta a Supabase
+    query = supabase.table("movimientos").select("*").eq("usuario_id", user["id"])
+    
+    # Filtro de tarjeta si no es "TODAS"
+    if tarjeta != "TODAS":
+        query = query.eq("tarjeta", tarjeta)
+    
+    # Filtros de fecha
+    if fecha_inicio:
+        query = query.gte("fecha", fecha_inicio)
+    if fecha_fin:
+        query = query.lte("fecha", fecha_fin)
+    
+    res = query.execute()
+    
+    if not res.data:
+        return RedirectResponse("/reportes")
+    
+    # Generación del archivo
     df = pd.DataFrame(res.data)
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        df.to_excel(writer, index=False, sheet_name='Movimientos')
+        df.to_excel(writer, index=False, sheet_name='Reporte Gastos')
     output.seek(0)
     
     return StreamingResponse(
         output, 
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={"Content-Disposition": f"attachment; filename=reporte_{user['username']}.xlsx"}
+        headers={"Content-Disposition": f"attachment; filename=reporte_{tarjeta}.xlsx"}
     )
 
 # --- MÓDULO: USUARIOS ---
