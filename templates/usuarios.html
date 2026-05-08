@@ -4,75 +4,43 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestión de Usuarios</title>
-    <style>
-        {{ css | safe }}
-        .container { max-width: 800px; margin: 0 auto; padding: 20px; }
-        .nav-bar { display: flex; gap: 20px; margin-bottom: 30px; padding: 15px; border-bottom: 1px solid #333; }
-        .nav-link { color: #e0e0f0; text-decoration: none; }
-        table { width: 100%; border-collapse: collapse; background: var(--surface); border-radius: 12px; overflow: hidden; margin-bottom: 30px; }
-        th, td { padding: 15px; text-align: left; border-bottom: 1px solid #333; }
-        th { background: #1a1a2e; color: #666; font-size: 0.9em; }
-        .role-badge { background: #333; padding: 4px 8px; border-radius: 4px; font-size: 0.8em; }
-        .admin-badge { background: #6c63ff; color: white; }
-        .form-card { background: #1a1a2e; padding: 25px; border-radius: 12px; border: 1px solid #333; }
-        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-        .form-group { margin-bottom: 10px; }
-        input, select, button { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #444; background: #0f0f1a; color: white; margin-top: 5px; box-sizing: border-box; }
-        button { background: #6c63ff; border: none; font-weight: bold; cursor: pointer; margin-top: 15px; }
-        button:hover { background: #5a52d5; }
-    </style>
+    <style>{{ css | safe }}</style>
 </head>
 <body>
-    <div class="container">
-        <nav class="nav-bar">
-            <a href="/" class="nav-link">⬅️ Volver al Inicio</a>
-        </nav>
+    <nav style="padding: 15px; background: var(--surface); border-bottom: 1px solid #333;">
+        <a href="/" style="color: var(--accent); text-decoration: none; font-weight: bold;">← Volver</a>
+    </nav>
 
-        <h1>Gestión de Usuarios</h1>
-        
-        <table>
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Usuario</th>
-                    <th>Rol</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for u in lista_usuarios %}
-                <tr>
-                    <td style="color: #555;">{{ u.id }}</td>
-                    <td><strong>{{ u.username }}</strong></td>
-                    <td>
-                        <span class="role-badge {% if u.role == 'admin' %}admin-badge{% endif %}">
-                            {{ u.role }}
-                        </span>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-
-        <div class="form-card">
-            <h2 style="margin-top: 0;">➕ Dar de Alta Nuevo Usuario</h2>
-            <form action="/admin/crear_usuario" method="post" class="form-grid">
-                <div class="form-group">
-                    <label>Nombre de Usuario:</label>
-                    <input type="text" name="nuevo_username" placeholder="Ej. alfredo_m" required>
-                </div>
-                <div class="form-group">
-                    <label>Contraseña Temporal:</label>
-                    <input type="password" name="nuevo_password" required>
-                </div>
-                <div class="form-group">
-                    <label>Rol del Sistema:</label>
-                    <select name="nuevo_role">
-                        <option value="usuario">Usuario Estándar</option>
-                        <option value="admin">Administrador</option>
-                    </select>
-                </div>
-                <button type="submit" style="grid-column: span 2;">Registrar Usuario</button>
+    <div style="padding: 20px;">
+        <div class="card" style="margin-bottom: 30px;">
+            <h3 style="margin-top: 0;">➕ Crear Nuevo Usuario</h3>
+            <form action="/admin/crear_usuario" method="post" style="display: grid; gap: 10px;">
+                <input name="nuevo_username" placeholder="Usuario" required>
+                <input name="nuevo_password" type="password" placeholder="Contraseña" required>
+                <select name="nuevo_role">
+                    <option value="user">Usuario Estándar</option>
+                    <option value="admin">Administrador</option>
+                </select>
+                <button type="submit">Registrar Usuario</button>
             </form>
+        </div>
+
+        <h3>Usuarios Existentes</h3>
+        <div style="display: grid; gap: 15px;">
+            {% for u in lista_usuarios %}
+            <div class="card" style="padding: 15px; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <strong style="font-size: 1.1em;">{{ u.username }}</strong><br>
+                    <span style="color: #888; font-size: 0.8em;">Rol: {{ u.role }}</span>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <a href="/admin/usuarios/editar/{{ u.id }}" style="text-decoration: none;">✏️</a>
+                    <a href="/admin/usuarios/eliminar/{{ u.id }}" 
+                       onclick="return confirm('¿Eliminar este usuario?')" 
+                       style="text-decoration: none;">🗑️</a>
+                </div>
+            </div>
+            {% endfor %}
         </div>
     </div>
 </body>
