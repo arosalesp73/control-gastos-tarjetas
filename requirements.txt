@@ -6,3 +6,4 @@ supabase
 pandas
 starlette
 itsdangerous
+openpyxl
