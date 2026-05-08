@@ -82,14 +82,10 @@ async def generar_excel(
     user = request.session.get("user")
     if not user: return RedirectResponse("/login")
     
-    # Iniciamos la consulta a Supabase
     query = supabase.table("movimientos").select("*").eq("usuario_id", user["id"])
     
-    # Filtro de tarjeta si no es "TODAS"
     if tarjeta != "TODAS":
         query = query.eq("tarjeta", tarjeta)
-    
-    # Filtros de fecha
     if fecha_inicio:
         query = query.gte("fecha", fecha_inicio)
     if fecha_fin:
@@ -100,17 +96,41 @@ async def generar_excel(
     if not res.data:
         return RedirectResponse("/reportes")
     
-    # Generación del archivo
     df = pd.DataFrame(res.data)
+    
+    # 1. Convertimos la columna a formato fecha para que el orden sea exacto
+    df["fecha"] = pd.to_datetime(df["fecha"])
+    
+    # 2. ORDENAR: De la más vieja a la más nueva (Ascending=True)
+    df = df.sort_values(by="fecha", ascending=True)
+    
+    # 3. Formateamos la fecha a texto para que en el Excel se vea limpia (AAAA-MM-DD)
+    df["fecha"] = df["fecha"].dt.strftime('%Y-%m-%d')
+    
+    # Seleccionamos y ordenamos columnas según tu petición
+    columnas_interes = ["fecha", "concepto", "monto", "tipo"]
+    df = df[columnas_interes]
+    df.columns = ["Fecha", "Concepto", "Monto", "Tipo"]
+    
+    # Formato de doble decimal (.99)
+    df["Monto"] = df["Monto"].map("{:.2f}".format)
+    
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        df.to_excel(writer, index=False, sheet_name='Reporte Gastos')
+        df.to_excel(writer, index=False, sheet_name='Mis Gastos')
+        
+        # Ajuste automático del ancho de columnas
+        worksheet = writer.sheets['Mis Gastos']
+        for idx, col in enumerate(df.columns):
+            max_len = max(df[col].astype(str).map(len).max(), len(col)) + 2
+            worksheet.column_dimensions[chr(65 + idx)].width = max_len
+
     output.seek(0)
     
     return StreamingResponse(
         output, 
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={"Content-Disposition": f"attachment; filename=reporte_{tarjeta}.xlsx"}
+        headers={"Content-Disposition": f"attachment; filename=Reporte_Gastos.xlsx"}
     )
 
 # --- MÓDULO: USUARIOS ---
