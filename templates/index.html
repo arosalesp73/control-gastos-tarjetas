@@ -62,27 +62,32 @@
     <h2>Mis Tarjetas</h2>
     <p style="color: #666; margin-bottom: 20px;">Selecciona una tarjeta para registrar un movimiento:</p>
     
-    <div class="grid-container">
-        {% for tarjeta in tarjetas %}
+<div class="grid-container">
+    {% for tarjeta in tarjetas %}
+    <div style="position: relative;"> <a href="/tarjetas/eliminar/{{ tarjeta.nombre_tarjeta }}" 
+           onclick="return confirm('¿Estás seguro de eliminar esta tarjeta y todos sus movimientos?');"
+           style="position: absolute; top: 10px; right: 10px; z-index: 10; color: #ff4e4e; text-decoration: none; font-size: 0.8em; background: rgba(255,0,0,0.1); padding: 2px 8px; border-radius: 5px; border: 1px solid #ff4e4e;">
+           🗑️ Borrar
+        </a>
+
         <a href="/movimientos/nuevo/{{ tarjeta.nombre_tarjeta }}" style="text-decoration: none; color: inherit;">
             <div class="card-tarjeta">
                 <h3 style="margin: 0 0 10px 0; color: var(--accent);">💳 {{ tarjeta.nombre_tarjeta }}</h3>
-                
                 <p style="margin: 5px 0; font-size: 0.85em; color: #bbb;">
-                    📅 <strong>Fecha de corte:</strong> los {{ tarjeta.dia_corte }}
+                    📅 <strong>Corte:</strong> los {{ tarjeta.dia_corte }}
                 </p>
-                
                 <p style="margin: 5px 0; font-size: 0.85em; color: #bbb;">
-                    🔔 <strong>Límite de pago:</strong> los {{ tarjeta.dia_pago }}
+                    🔔 <strong>Pago:</strong> los {{ tarjeta.dia_pago }}
                 </p>
             </div>
         </a>
-        {% endfor %}
-
-        <a href="/tarjetas/nueva" class="btn-plus">
-            <span>+</span>
-        </a>
     </div>
+    {% endfor %}
+
+    <a href="/tarjetas/nueva" class="btn-plus">
+        <span>+</span>
+    </a>
+</div>
 
 </body>
 </html>
