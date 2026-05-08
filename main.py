@@ -60,9 +60,11 @@ async def login(request: Request, username: str = Form(...), password: str = For
 
 @app.get("/logout")
 async def logout(request: Request):
-    request.session.clear()
-    return RedirectResponse("/login")
-
+    # Borramos los datos de la sesión uno por uno para ser más precisos
+    request.session.pop("user", None)
+    # Redirigimos al login con un código 303 para asegurar que el navegador limpie la ruta
+    return RedirectResponse(url="/login", status_code=303)
+    
 # --- MÓDULO: REPORTES ---
 @app.get("/reportes", response_class=HTMLResponse)
 async def rep_ui(request: Request):
