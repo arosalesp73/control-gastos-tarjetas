@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Control de Gastos</title>
+    <style>
+        {{ css | safe }}
+        .container { max-width: 400px; margin: 100px auto; padding: 20px; }
+        h2 { text-align: center; color: var(--accent); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <h2>Bienvenido</h2>
+            <form action="/login" method="post">
+                <label>Usuario:</label>
+                <input type="text" name="username" required placeholder="Tu usuario">
+                
+                <label>Contraseña:</label>
+                <input type="password" name="password" required placeholder="••••••••">
+                
+                <button type="submit">Entrar</button>
+            </form>
+        </div>
+    </div>
+</body>
+</html>
