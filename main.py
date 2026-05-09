@@ -48,7 +48,6 @@ async def inicio(request: Request):
 
 @app.get("/login", response_class=HTMLResponse)
 async def login_ui(request: Request):
-    # Aseguramos que la respuesta sea limpia y lleve el CSS
     return templates.TemplateResponse("login.html", {
         "request": request, 
         "css": DARK_CSS
@@ -64,9 +63,7 @@ async def login(request: Request, username: str = Form(...), password: str = For
 
 @app.get("/logout")
 async def logout(request: Request):
-    # Limpiamos la sesión de forma segura
     request.session.clear()
-    # Redirigimos usando la URL completa para evitar confusiones del middleware
     return RedirectResponse(url="/login", status_code=303)
     
 # --- MÓDULO: REPORTES ---
@@ -103,33 +100,18 @@ async def generar_excel(
         return RedirectResponse("/reportes")
     
     df = pd.DataFrame(res.data)
-    
-    # --- BLINDAJE CONTRA ERRORES DE FECHA ---
-    # Convertimos a fecha, lo que no sea fecha se vuelve NaT (Not a Time) en lugar de dar error
     df["fecha"] = pd.to_datetime(df["fecha"], errors='coerce')
-    
-    # Eliminamos filas que se hayan quedado sin fecha para que no rompan el ordenamiento
     df = df.dropna(subset=["fecha"])
-    
-    # Ahora sí, ordenamos de la más vieja a la más nueva
     df = df.sort_values(by="fecha", ascending=True)
-    
-    # Formateamos para el Excel
     df["fecha_limpia"] = df["fecha"].dt.strftime('%Y-%m-%d')
     
-    # Seleccionamos y ordenamos columnas según tu petición
-    # Usamos 'fecha_limpia' para que se vea bien
     df_final = df[["fecha_limpia", "concepto", "monto", "tipo"]].copy()
     df_final.columns = ["Fecha", "Concepto", "Monto", "Tipo"]
-    
-    # Formato de doble decimal
     df_final["Monto"] = df_final["Monto"].map("{:.2f}".format)
     
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
         df_final.to_excel(writer, index=False, sheet_name='Mis Gastos')
-        
-        # Ajuste automático del ancho de columnas
         worksheet = writer.sheets['Mis Gastos']
         for idx, col in enumerate(df_final.columns):
             max_len = max(df_final[col].astype(str).map(len).max(), len(col)) + 2
@@ -137,10 +119,13 @@ async def generar_excel(
 
     output.seek(0)
     
+    # Nombre de archivo dinámico basado en la tarjeta seleccionada
+    nombre_archivo = f"Reporte_{tarjeta}.xlsx"
+    
     return StreamingResponse(
         output, 
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={"Content-Disposition": f"attachment; filename=Reporte_Gastos.xlsx"}
+        headers={"Content-Disposition": f"attachment; filename={nombre_archivo}"}
     )
 
 # --- MÓDULO: USUARIOS ---
