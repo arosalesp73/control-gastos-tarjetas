@@ -36,6 +36,7 @@ body { background: var(--bg); color: var(--text); font-family: sans-serif; margi
 .card { background: var(--surface); padding: 20px; border-radius: 12px; border: 1px solid #333; }
 input, select { width: 100%; padding: 10px; margin-bottom: 10px; border-radius: 5px; border: 1px solid #444; background: #0f0f1a; color: white; }
 button { width: 100%; padding: 10px; background: var(--accent); border: none; color: white; border-radius: 5px; cursor: pointer; }
+.error-msg { color: #ff5555; background: rgba(255,85,85,0.1); padding: 10px; border-radius: 5px; margin-bottom: 15px; text-align: center; border: 1px solid #ff5555; }
 """
 
 # --- RUTAS DE NAVEGACIÓN ---
@@ -47,8 +48,8 @@ async def inicio(request: Request):
     return templates.TemplateResponse("index.html", {"request": request, "user": user, "tarjetas": res.data, "css": DARK_CSS})
 
 @app.get("/login", response_class=HTMLResponse)
-async def login_ui(request: Request):
-    return templates.TemplateResponse("login.html", {"request": request, "css": DARK_CSS})
+async def login_ui(request: Request, error: str = None):
+    return templates.TemplateResponse("login.html", {"request": request, "css": DARK_CSS, "error": error})
 
 @app.post("/login")
 async def login(request: Request, username: str = Form(...), password: str = Form(...)):
@@ -56,7 +57,8 @@ async def login(request: Request, username: str = Form(...), password: str = For
     if res.data:
         request.session["user"] = res.data[0]
         return RedirectResponse("/", status_code=303)
-    return RedirectResponse("/login")
+    # Si falla, mandamos un parámetro de error
+    return RedirectResponse("/login?error=Usuario+o+contraseña+incorrectos", status_code=303)
 
 @app.get("/logout")
 async def logout(request: Request):
@@ -127,7 +129,8 @@ async def f_edit_user(request: Request, id: int):
     user = request.session.get("user")
     if not user or user.get("role") != 'admin': return RedirectResponse("/")
     res = supabase.table("usuarios").select("*").eq("id", id).execute()
-    return templates.TemplateResponse("editar_usuario.html", {"request": request, "usuario": res.data[0], "css": DARK_CSS})
+    # Usamos u_edit para que coincida con tu HTML
+    return templates.TemplateResponse("editar_usuario.html", {"request": request, "u_edit": res.data[0], "css": DARK_CSS})
 
 @app.post("/admin/usuarios/actualizar")
 async def actualizar_usuario(request: Request, id: int = Form(...), username: str = Form(...), password: str = Form(...), role: str = Form(...)):
@@ -140,11 +143,11 @@ async def actualizar_usuario(request: Request, id: int = Form(...), username: st
 async def e_usuario(request: Request, id: int):
     user = request.session.get("user")
     if not user or user.get("role") != 'admin': return RedirectResponse("/")
-    if id == user["id"]: return RedirectResponse("/admin/usuarios") # No borrarse a sí mismo
+    if id == user["id"]: return RedirectResponse("/admin/usuarios")
     supabase.table("usuarios").delete().eq("id", id).execute()
     return RedirectResponse("/admin/usuarios", status_code=303)
 
-# --- MÓDULO: TARJETAS ---
+# --- MÓDULO: TARJETAS (Sin cambios) ---
 @app.get("/tarjetas/nueva", response_class=HTMLResponse)
 async def f_nueva(request: Request):
     user = request.session.get("user")
