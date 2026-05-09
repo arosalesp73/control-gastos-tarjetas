@@ -48,10 +48,7 @@ async def inicio(request: Request):
 
 @app.get("/login", response_class=HTMLResponse)
 async def login_ui(request: Request):
-    return templates.TemplateResponse("login.html", {
-        "request": request, 
-        "css": DARK_CSS
-    })
+    return templates.TemplateResponse("login.html", {"request": request, "css": DARK_CSS})
 
 @app.post("/login")
 async def login(request: Request, username: str = Form(...), password: str = Form(...)):
@@ -76,33 +73,21 @@ async def rep_ui(request: Request):
 
 @app.get("/reportes/generar")
 @app.get("/reportes/excel")
-async def generar_excel(
-    request: Request, 
-    tarjeta: str = "TODAS", 
-    fecha_inicio: str = None, 
-    fecha_fin: str = None
-):
+async def generar_excel(request: Request, tarjeta: str = "TODAS", fecha_inicio: str = None, fecha_fin: str = None):
     user = request.session.get("user")
     if not user: return RedirectResponse("/login")
     
     query = supabase.table("movimientos").select("*").eq("usuario_id", user["id"])
-    
-    if tarjeta != "TODAS":
-        query = query.eq("tarjeta", tarjeta)
-    if fecha_inicio:
-        query = query.gte("fecha", fecha_inicio)
-    if fecha_fin:
-        query = query.lte("fecha", fecha_fin)
+    if tarjeta != "TODAS": query = query.eq("tarjeta", tarjeta)
+    if fecha_inicio: query = query.gte("fecha", fecha_inicio)
+    if fecha_fin: query = query.lte("fecha", fecha_fin)
     
     res = query.execute()
-    
-    if not res.data:
-        return RedirectResponse("/reportes")
+    if not res.data: return RedirectResponse("/reportes")
     
     df = pd.DataFrame(res.data)
     df["fecha"] = pd.to_datetime(df["fecha"], errors='coerce')
-    df = df.dropna(subset=["fecha"])
-    df = df.sort_values(by="fecha", ascending=True)
+    df = df.dropna(subset=["fecha"]).sort_values(by="fecha", ascending=True)
     df["fecha_limpia"] = df["fecha"].dt.strftime('%Y-%m-%d')
     
     df_final = df[["fecha_limpia", "concepto", "monto", "tipo"]].copy()
@@ -118,18 +103,11 @@ async def generar_excel(
             worksheet.column_dimensions[chr(65 + idx)].width = max_len
 
     output.seek(0)
-    
-    # Nombre de archivo dinámico basado en la tarjeta seleccionada
     nombre_archivo = f"Reporte_{tarjeta}.xlsx"
-    
-    return StreamingResponse(
-        output, 
-        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={"Content-Disposition": f"attachment; filename={nombre_archivo}"}
-    )
+    return StreamingResponse(output, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                             headers={"Content-Disposition": f"attachment; filename={nombre_archivo}"})
 
 # --- MÓDULO: USUARIOS ---
-
 @app.get("/admin/usuarios", response_class=HTMLResponse)
 async def panel_usuarios(request: Request):
     user = request.session.get("user")
@@ -162,8 +140,7 @@ async def actualizar_usuario(request: Request, id: int = Form(...), username: st
 async def e_usuario(request: Request, id: int):
     user = request.session.get("user")
     if not user or user.get("role") != 'admin': return RedirectResponse("/")
-    # Evitar que el admin se borre a sí mismo
-    if id == user["id"]: return RedirectResponse("/admin/usuarios")
+    if id == user["id"]: return RedirectResponse("/admin/usuarios") # No borrarse a sí mismo
     supabase.table("usuarios").delete().eq("id", id).execute()
     return RedirectResponse("/admin/usuarios", status_code=303)
 
@@ -189,11 +166,10 @@ async def f_editar(request: Request, nombre: str):
     return templates.TemplateResponse("editar_tarjeta.html", {"request": request, "tarjeta": res.data[0], "css": DARK_CSS})
 
 @app.post("/tarjetas/actualizar")
-async def actualizar_tarjeta(request: Request, nombre_tarjeta: str = Form(...), dia_corte: int = Form(...), dia_pago: int = Form(...), id_tarjeta: int = Form(None), id: int = Form(None)):
+async def actualizar_tarjeta(request: Request, nombre_tarjeta: str = Form(...), dia_corte: int = Form(...), dia_pago: int = Form(...), id: int = Form(...)):
     user = request.session.get("user")
     if not user: return RedirectResponse("/login")
-    target_id = id_tarjeta if id_tarjeta is not None else id
-    supabase.table("tarjetas").update({"nombre_tarjeta": nombre_tarjeta, "dia_corte": dia_corte, "dia_pago": dia_pago}).eq("id", target_id).eq("usuario_id", user["id"]).execute()
+    supabase.table("tarjetas").update({"nombre_tarjeta": nombre_tarjeta, "dia_corte": dia_corte, "dia_pago": dia_pago}).eq("id", id).eq("usuario_id", user["id"]).execute()
     return RedirectResponse("/", status_code=303)
 
 @app.get("/tarjetas/eliminar/{nombre}")
