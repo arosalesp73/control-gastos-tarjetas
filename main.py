@@ -48,7 +48,11 @@ async def inicio(request: Request):
 
 @app.get("/login", response_class=HTMLResponse)
 async def login_ui(request: Request):
-    return templates.TemplateResponse("login.html", {"request": request, "css": DARK_CSS})
+    # Aseguramos que la respuesta sea limpia y lleve el CSS
+    return templates.TemplateResponse("login.html", {
+        "request": request, 
+        "css": DARK_CSS
+    })
 
 @app.post("/login")
 async def login(request: Request, username: str = Form(...), password: str = Form(...)):
@@ -60,11 +64,10 @@ async def login(request: Request, username: str = Form(...), password: str = For
 
 @app.get("/logout")
 async def logout(request: Request):
-    # Eliminamos todo el contenido de la sesión de golpe
+    # Limpiamos la sesión de forma segura
     request.session.clear()
-    # Forzamos la redirección al login con el estado 303 (See Other)
-    response = RedirectResponse(url="/login", status_code=303)
-    return response
+    # Redirigimos usando la URL completa para evitar confusiones del middleware
+    return RedirectResponse(url="/login", status_code=303)
     
 # --- MÓDULO: REPORTES ---
 @app.get("/reportes", response_class=HTMLResponse)
