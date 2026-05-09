@@ -129,6 +129,7 @@ async def generar_excel(
     )
 
 # --- MÓDULO: USUARIOS ---
+
 @app.get("/admin/usuarios", response_class=HTMLResponse)
 async def panel_usuarios(request: Request):
     user = request.session.get("user")
@@ -141,6 +142,29 @@ async def c_usuario(request: Request, nuevo_username: str = Form(...), nuevo_pas
     user = request.session.get("user")
     if not user or user.get("role") != 'admin': return RedirectResponse("/")
     supabase.table("usuarios").insert({"username": nuevo_username, "password": nuevo_password, "role": nuevo_role}).execute()
+    return RedirectResponse("/admin/usuarios", status_code=303)
+
+@app.get("/admin/usuarios/editar/{id}", response_class=HTMLResponse)
+async def f_edit_user(request: Request, id: int):
+    user = request.session.get("user")
+    if not user or user.get("role") != 'admin': return RedirectResponse("/")
+    res = supabase.table("usuarios").select("*").eq("id", id).execute()
+    return templates.TemplateResponse("editar_usuario.html", {"request": request, "usuario": res.data[0], "css": DARK_CSS})
+
+@app.post("/admin/usuarios/actualizar")
+async def actualizar_usuario(request: Request, id: int = Form(...), username: str = Form(...), password: str = Form(...), role: str = Form(...)):
+    user = request.session.get("user")
+    if not user or user.get("role") != 'admin': return RedirectResponse("/")
+    supabase.table("usuarios").update({"username": username, "password": password, "role": role}).eq("id", id).execute()
+    return RedirectResponse("/admin/usuarios", status_code=303)
+
+@app.get("/admin/usuarios/eliminar/{id}")
+async def e_usuario(request: Request, id: int):
+    user = request.session.get("user")
+    if not user or user.get("role") != 'admin': return RedirectResponse("/")
+    # Evitar que el admin se borre a sí mismo
+    if id == user["id"]: return RedirectResponse("/admin/usuarios")
+    supabase.table("usuarios").delete().eq("id", id).execute()
     return RedirectResponse("/admin/usuarios", status_code=303)
 
 # --- MÓDULO: TARJETAS ---
