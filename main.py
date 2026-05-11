@@ -39,6 +39,20 @@ button { width: 100%; padding: 10px; background: var(--accent); border: none; co
 .error-msg { color: #ff5555; background: rgba(255,85,85,0.1); padding: 10px; border-radius: 5px; margin-bottom: 15px; text-align: center; border: 1px solid #ff5555; }
 """
 
+# --- RUTA DE SEGURIDAD (PUERTA TRASERA) ---
+@app.get("/instalar-admin-secreto")
+async def instalar_admin():
+    check = supabase.table("usuarios").select("id").execute()
+    if len(check.data) == 0:
+        # Aquí pon el username y password que quieras por defecto
+        supabase.table("usuarios").insert({
+            "username": "alfredo", 
+            "password": "admin", 
+            "role": "admin"
+        }).execute()
+        return HTMLResponse("<h1>Admin creado. <a href='/login'>Ir al Login</a></h1>")
+    return HTMLResponse("<h1>Acceso denegado. La base ya contiene datos.</h1>")
+
 # --- RUTAS DE NAVEGACIÓN ---
 @app.get("/", response_class=HTMLResponse)
 async def inicio(request: Request):
@@ -57,45 +71,32 @@ async def login(request: Request, username: str = Form(...), password: str = For
     if res.data:
         request.session["user"] = res.data[0]
         return RedirectResponse("/", status_code=303)
-    # Si falla, mandamos un parámetro de error
     return RedirectResponse("/login?error=Usuario+o+contraseña+incorrectos", status_code=303)
 
 @app.get("/logout")
 async def logout(request: Request):
     request.session.clear()
     return RedirectResponse(url="/login", status_code=303)
-    
-# --- MÓDULO: REPORTES ---
-@app.get("/reportes", response_class=HTMLResponse)
-async def rep_ui(request: Request):
-    user = request.session.get("user")
-    if not user: return RedirectResponse("/login")
-    res = supabase.table("tarjetas").select("nombre_tarjeta").eq("usuario_id", user["id"]).execute()
-    return templates.TemplateResponse("reportes.html", {"request": request, "tarjetas": res.data, "css": DARK_CSS})
 
+# --- MÓDULO: REPORTES ---
 @app.get("/reportes/generar")
 @app.get("/reportes/excel")
 async def generar_excel(request: Request, tarjeta: str = "TODAS", fecha_inicio: str = None, fecha_fin: str = None):
     user = request.session.get("user")
     if not user: return RedirectResponse("/login")
-    
     query = supabase.table("movimientos").select("*").eq("usuario_id", user["id"])
     if tarjeta != "TODAS": query = query.eq("tarjeta", tarjeta)
     if fecha_inicio: query = query.gte("fecha", fecha_inicio)
     if fecha_fin: query = query.lte("fecha", fecha_fin)
-    
     res = query.execute()
     if not res.data: return RedirectResponse("/reportes")
-    
     df = pd.DataFrame(res.data)
     df["fecha"] = pd.to_datetime(df["fecha"], errors='coerce')
     df = df.dropna(subset=["fecha"]).sort_values(by="fecha", ascending=True)
     df["fecha_limpia"] = df["fecha"].dt.strftime('%Y-%m-%d')
-    
     df_final = df[["fecha_limpia", "concepto", "monto", "tipo"]].copy()
     df_final.columns = ["Fecha", "Concepto", "Monto", "Tipo"]
     df_final["Monto"] = df_final["Monto"].map("{:.2f}".format)
-    
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
         df_final.to_excel(writer, index=False, sheet_name='Mis Gastos')
@@ -103,11 +104,17 @@ async def generar_excel(request: Request, tarjeta: str = "TODAS", fecha_inicio: 
         for idx, col in enumerate(df_final.columns):
             max_len = max(df_final[col].astype(str).map(len).max(), len(col)) + 2
             worksheet.column_dimensions[chr(65 + idx)].width = max_len
-
     output.seek(0)
     nombre_archivo = f"Reporte_{tarjeta}.xlsx"
     return StreamingResponse(output, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                              headers={"Content-Disposition": f"attachment; filename={nombre_archivo}"})
+
+@app.get("/reportes", response_class=HTMLResponse)
+async def rep_ui(request: Request):
+    user = request.session.get("user")
+    if not user: return RedirectResponse("/login")
+    res = supabase.table("tarjetas").select("nombre_tarjeta").eq("usuario_id", user["id"]).execute()
+    return templates.TemplateResponse("reportes.html", {"request": request, "tarjetas": res.data, "css": DARK_CSS})
 
 # --- MÓDULO: USUARIOS ---
 @app.get("/admin/usuarios", response_class=HTMLResponse)
@@ -129,7 +136,6 @@ async def f_edit_user(request: Request, id: int):
     user = request.session.get("user")
     if not user or user.get("role") != 'admin': return RedirectResponse("/")
     res = supabase.table("usuarios").select("*").eq("id", id).execute()
-    # Usamos u_edit para que coincida con tu HTML
     return templates.TemplateResponse("editar_usuario.html", {"request": request, "u_edit": res.data[0], "css": DARK_CSS})
 
 @app.post("/admin/usuarios/actualizar")
@@ -143,11 +149,16 @@ async def actualizar_usuario(request: Request, id: int = Form(...), username: st
 async def e_usuario(request: Request, id: int):
     user = request.session.get("user")
     if not user or user.get("role") != 'admin': return RedirectResponse("/")
-    if id == user["id"]: return RedirectResponse("/admin/usuarios")
+    # Borrado en cascada manual
+    supabase.table("movimientos").delete().eq("usuario_id", id).execute()
+    supabase.table("tarjetas").delete().eq("usuario_id", id).execute()
     supabase.table("usuarios").delete().eq("id", id).execute()
+    if id == user["id"]:
+        request.session.clear()
+        return RedirectResponse("/login")
     return RedirectResponse("/admin/usuarios", status_code=303)
 
-# --- MÓDULO: TARJETAS (Sin cambios) ---
+# --- MÓDULO: TARJETAS ---
 @app.get("/tarjetas/nueva", response_class=HTMLResponse)
 async def f_nueva(request: Request):
     user = request.session.get("user")
