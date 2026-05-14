@@ -24,16 +24,48 @@
         .btn-edit:hover { opacity: 1; }
         
         .info-tarjeta { background: #1a1a2e; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #6c63ff; }
-        .back-link { display: block; text-align: center; margin-top: 20px; color: #666; text-decoration: none; font-size: 0.85em; }
+        .back-link { display: block; text-align: center; margin-top: 20px; color: #888; text-decoration: none; font-size: 0.95em; transition: 0.3s; }
+        .back-link:hover { color: white; }
+
+        /* Estilo de la notificación de éxito */
+        .success-box { 
+            background: rgba(0, 255, 136, 0.1); 
+            border: 1px solid #00ff88; 
+            color: #00ff88; 
+            padding: 12px; 
+            border-radius: 8px; 
+            text-align: center; 
+            margin-bottom: 20px; 
+            font-size: 0.9em;
+            animation: fadeIn 0.5s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="form-card">
             <h2 style="margin-top: 0; font-size: 1.4em;">📝 Registrar</h2>
+            
             <div class="info-tarjeta">
                 Tarjeta: <strong>{{ nombre_tarjeta }}</strong>
             </div>
+
+            {% if success %}
+            <div id="notificacion" class="success-box">
+                ✅ ¡Movimiento registrado correctamente!
+            </div>
+            <script>
+                setTimeout(() => {
+                    const el = document.getElementById('notificacion');
+                    if(el) el.style.display = 'none';
+                }, 3000);
+            </script>
+            {% endif %}
             
             <form action="/movimientos/guardar" method="post">
                 <input type="hidden" name="tarjeta_nombre" value="{{ nombre_tarjeta }}">
@@ -85,7 +117,13 @@
                 {% endif %}
             </div>
 
-            <a href="/" class="back-link">✖ Cancelar</a>
+            <a href="/" class="back-link">
+                {% if success %}
+                    ⬅ Volver al Inicio
+                {% else %}
+                    ✖ Cancelar
+                {% endif %}
+            </a>
         </div> 
     </div> 
 
