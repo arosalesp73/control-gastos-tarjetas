@@ -101,7 +101,9 @@
             
             <div class="user-info" style="display: flex; align-items: center; gap: 15px; padding: 0 15px;">
                 <span style="font-size: 0.9em; color: #888;">👤 {{ user.username }} {% if user.role == 'admin' %}<span class="admin-tag">Admin</span>{% endif %}</span>
-                <a href="/logout" style="color: #ff4e4e; text-decoration: none; font-weight: bold;">Salir</a>
+                <a href="/logout" style="text-decoration: none;">
+                    <button style="background-color: #ff5555;">Cerrar Sesión</button>
+                </a>
             </div>
         </div>
     </nav>
