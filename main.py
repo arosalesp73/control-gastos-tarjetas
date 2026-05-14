@@ -14,11 +14,9 @@ from supabase import create_client, Client
 app = FastAPI()
 
 # --- CONFIGURACIÓN DE SESIONES ---
-# Usamos una clave secreta para firmar las cookies
 app.add_middleware(SessionMiddleware, secret_key=os.environ.get("SESSION_SECRET", "12345"))
 
-# --- MIDDLEWARE ANTI-CACHE (SEGURIDAD BOTÓN ATRÁS) ---
-# Este bloque obliga al navegador a pedir permiso al servidor siempre
+# --- MIDDLEWARE ANTI-CACHE ---
 @app.middleware("http")
 async def add_no_cache_headers(request: Request, call_next):
     response = await call_next(request)
@@ -52,7 +50,6 @@ button { width: 100%; padding: 10px; background: var(--accent); border: none; co
 .error-msg { color: #ff5555; background: rgba(255,85,85,0.1); padding: 10px; border-radius: 5px; margin-bottom: 15px; text-align: center; border: 1px solid #ff5555; }
 """
 
-# --- RUTA DE SEGURIDAD (PUERTA TRASERA) ---
 @app.get("/instalar-admin-secreto")
 async def instalar_admin():
     check = supabase.table("usuarios").select("id").execute()
@@ -63,9 +60,8 @@ async def instalar_admin():
             "role": "admin"
         }).execute()
         return HTMLResponse("<h1>Admin creado. <a href='/login'>Ir al Login</a></h1>")
-    return HTMLResponse("<h1>Acceso denegado. La base ya contiene datos.</h1>")
+    return HTMLResponse("<h1>Acceso denegado.</h1>")
 
-# --- RUTAS DE NAVEGACIÓN ---
 @app.get("/", response_class=HTMLResponse)
 async def inicio(request: Request):
     user = request.session.get("user")
@@ -75,16 +71,14 @@ async def inicio(request: Request):
 
 @app.get("/login", response_class=HTMLResponse)
 async def login_ui(request: Request, error: str = None):
-    # Si ya tiene sesión, lo mandamos al inicio
-    if request.session.get("user"):
-        return RedirectResponse("/")
+    if request.session.get("user"): return RedirectResponse("/")
     return templates.TemplateResponse("login.html", {"request": request, "css": DARK_CSS, "error": error})
 
 @app.post("/login")
 async def login(request: Request, username: str = Form(...), password: str = Form(...)):
     res = supabase.table("usuarios").select("*").eq("username", username).eq("password", password).execute()
     if res.data:
-        request.session.clear() # Limpiamos basura previa
+        request.session.clear()
         request.session["user"] = res.data[0]
         return RedirectResponse("/", status_code=303)
     return RedirectResponse("/login?error=Usuario+o+contraseña+incorrectos", status_code=303)
@@ -93,10 +87,16 @@ async def login(request: Request, username: str = Form(...), password: str = For
 async def logout(request: Request):
     request.session.clear()
     response = RedirectResponse(url="/login", status_code=303)
-    response.delete_cookie("session") # Borramos la cookie físicamente
+    response.delete_cookie("session")
     return response
 
-# --- MÓDULO: REPORTES ---
+@app.get("/reportes", response_class=HTMLResponse)
+async def rep_ui(request: Request):
+    user = request.session.get("user")
+    if not user: return RedirectResponse("/login")
+    res = supabase.table("tarjetas").select("nombre_tarjeta").eq("usuario_id", user["id"]).execute()
+    return templates.TemplateResponse("reportes.html", {"request": request, "tarjetas": res.data, "css": DARK_CSS})
+
 @app.get("/reportes/generar")
 @app.get("/reportes/excel")
 async def generar_excel(request: Request, tarjeta: str = "TODAS", fecha_inicio: str = None, fecha_fin: str = None):
@@ -127,13 +127,92 @@ async def generar_excel(request: Request, tarjeta: str = "TODAS", fecha_inicio: 
     return StreamingResponse(output, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                              headers={"Content-Disposition": f"attachment; filename={nombre_archivo}"})
 
-@app.get("/reportes", response_class=HTMLResponse)
-async def rep_ui(request: Request):
+@app.get("/admin/usuarios", response_class=HTMLResponse)
+async def panel_usuarios(request: Request):
+    user = request.session.get("user")
+    if not user or user.get("role") != 'admin': return RedirectResponse("/")
+    res = supabase.table("usuarios").select("*").execute()
+    return templates.TemplateResponse("usuarios.html", {"request": request, "user": user, "lista_usuarios": res.data, "css": DARK_CSS})
+
+@app.post("/admin/crear_usuario")
+async def c_usuario(request: Request, nuevo_username: str = Form(...), nuevo_password: str = Form(...), nuevo_role: str = Form(...)):
+    user = request.session.get("user")
+    if not user or user.get("role") != 'admin': return RedirectResponse("/")
+    supabase.table("usuarios").insert({"username": nuevo_username, "password": nuevo_password, "role": nuevo_role}).execute()
+    return RedirectResponse("/admin/usuarios", status_code=303)
+
+@app.get("/admin/usuarios/editar/{id}", response_class=HTMLResponse)
+async def f_edit_user(request: Request, id: int):
+    user = request.session.get("user")
+    if not user or user.get("role") != 'admin': return RedirectResponse("/")
+    res = supabase.table("usuarios").select("*").eq("id", id).execute()
+    return templates.TemplateResponse("editar_usuario.html", {"request": request, "u_edit": res.data[0], "css": DARK_CSS})
+
+@app.post("/admin/usuarios/actualizar")
+async def actualizar_usuario(request: Request, id: int = Form(...), username: str = Form(...), password: str = Form(...), role: str = Form(...)):
+    user = request.session.get("user")
+    if not user or user.get("role") != 'admin': return RedirectResponse("/")
+    supabase.table("usuarios").update({"username": username, "password": password, "role": role}).eq("id", id).execute()
+    return RedirectResponse("/admin/usuarios", status_code=303)
+
+@app.get("/admin/usuarios/eliminar/{id}")
+async def e_usuario(request: Request, id: int):
+    user = request.session.get("user")
+    if not user or user.get("role") != 'admin': return RedirectResponse("/")
+    supabase.table("movimientos").delete().eq("usuario_id", id).execute()
+    supabase.table("tarjetas").delete().eq("usuario_id", id).execute()
+    supabase.table("usuarios").delete().eq("id", id).execute()
+    if id == user["id"]:
+        request.session.clear()
+        return RedirectResponse("/login")
+    return RedirectResponse("/admin/usuarios", status_code=303)
+
+@app.get("/tarjetas/nueva", response_class=HTMLResponse)
+async def f_nueva(request: Request):
     user = request.session.get("user")
     if not user: return RedirectResponse("/login")
-    res = supabase.table("tarjetas").select("nombre_tarjeta").eq("usuario_id", user["id"]).execute()
-    return templates.TemplateResponse("reportes.html", {"request": request, "tarjetas": res.data, "css": DARK_CSS})
+    return templates.TemplateResponse("nueva_tarjeta.html", {"request": request, "user": user, "css": DARK_CSS})
 
-# --- MÓDULO: USUARIOS (SOLO ADMIN) ---
-@app.get("/admin/usuarios", response_class=HTMLResponse)
-async def
+@app.post("/tarjetas/guardar")
+async def g_tarjeta(request: Request, nombre_tarjeta: str = Form(...), dia_corte: int = Form(...), dia_pago: int = Form(...)):
+    user = request.session.get("user")
+    if not user: return RedirectResponse("/login")
+    supabase.table("tarjetas").insert({"nombre_tarjeta": nombre_tarjeta, "usuario_id": user["id"], "dia_corte": dia_corte, "dia_pago": dia_pago}).execute()
+    return RedirectResponse("/", status_code=303)
+
+@app.get("/tarjetas/editar/{nombre}", response_class=HTMLResponse)
+async def f_editar(request: Request, nombre: str):
+    user = request.session.get("user")
+    if not user: return RedirectResponse("/login")
+    res = supabase.table("tarjetas").select("*").eq("nombre_tarjeta", nombre).eq("usuario_id", user["id"]).execute()
+    return templates.TemplateResponse("editar_tarjeta.html", {"request": request, "tarjeta": res.data[0], "css": DARK_CSS})
+
+@app.post("/tarjetas/actualizar")
+async def actualizar_tarjeta(request: Request, nombre_tarjeta: str = Form(...), dia_corte: int = Form(...), dia_pago: int = Form(...), id: int = Form(...)):
+    user = request.session.get("user")
+    if not user: return RedirectResponse("/login")
+    supabase.table("tarjetas").update({"nombre_tarjeta": nombre_tarjeta, "dia_corte": dia_corte, "dia_pago": dia_pago}).eq("id", id).eq("usuario_id", user["id"]).execute()
+    return RedirectResponse("/", status_code=303)
+
+@app.get("/tarjetas/eliminar/{nombre}")
+async def e_tarjeta(request: Request, nombre: str):
+    user = request.session.get("user")
+    if not user: return RedirectResponse("/login")
+    supabase.table("movimientos").delete().eq("tarjeta", nombre).eq("usuario_id", user["id"]).execute()
+    supabase.table("tarjetas").delete().eq("nombre_tarjeta", nombre).eq("usuario_id", user["id"]).execute()
+    return RedirectResponse("/", status_code=303)
+
+@app.get("/movimientos/nuevo/{tarjeta}", response_class=HTMLResponse)
+async def n_mov(request: Request, tarjeta: str):
+    user = request.session.get("user")
+    if not user: return RedirectResponse("/login")
+    res = supabase.table("movimientos").select("*").eq("tarjeta", tarjeta).eq("usuario_id", user["id"]).order("id", desc=True).limit(5).execute()
+    return templates.TemplateResponse("registrar_movimiento.html", {"request": request, "nombre_tarjeta": tarjeta, "movimientos": res.data, "css": DARK_CSS})
+
+@app.post("/movimientos/guardar")
+async def g_mov(request: Request, tarjeta_nombre: str = Form(...), concepto: str = Form(...), monto: float = Form(...), tipo_movimiento: str = Form(...), fecha: str = Form(...)):
+    user = request.session.get("user")
+    if not user: return RedirectResponse("/login")
+    monto_f = monto * -1 if tipo_movimiento == 'abono' else monto
+    supabase.table("movimientos").insert({"tarjeta": tarjeta_nombre, "concepto": concepto, "monto": monto_f, "fecha": fecha, "usuario_id": user["id"], "tipo": tipo_movimiento}).execute()
+    return RedirectResponse(f"/movimientos/nuevo/{tarjeta_nombre}", status_code=303)
