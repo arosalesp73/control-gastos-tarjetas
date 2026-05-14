@@ -203,16 +203,33 @@ async def e_tarjeta(request: Request, nombre: str):
     return RedirectResponse("/", status_code=303)
 
 @app.get("/movimientos/nuevo/{tarjeta}", response_class=HTMLResponse)
-async def n_mov(request: Request, tarjeta: str):
+async def n_mov(request: Request, tarjeta: str, success: bool = False): # Añade success aquí
     user = request.session.get("user")
     if not user: return RedirectResponse("/login")
     res = supabase.table("movimientos").select("*").eq("tarjeta", tarjeta).eq("usuario_id", user["id"]).order("id", desc=True).limit(5).execute()
-    return templates.TemplateResponse("registrar_movimiento.html", {"request": request, "nombre_tarjeta": tarjeta, "movimientos": res.data, "css": DARK_CSS})
+    
+    return templates.TemplateResponse("registrar_movimiento.html", {
+        "request": request, 
+        "nombre_tarjeta": tarjeta, 
+        "movimientos": res.data, 
+        "css": DARK_CSS,
+        "success": success # Lo pasamos al HTML
+    })
 
 @app.post("/movimientos/guardar")
 async def g_mov(request: Request, tarjeta_nombre: str = Form(...), concepto: str = Form(...), monto: float = Form(...), tipo_movimiento: str = Form(...), fecha: str = Form(...)):
     user = request.session.get("user")
     if not user: return RedirectResponse("/login")
+    
     monto_f = monto * -1 if tipo_movimiento == 'abono' else monto
-    supabase.table("movimientos").insert({"tarjeta": tarjeta_nombre, "concepto": concepto, "monto": monto_f, "fecha": fecha, "usuario_id": user["id"], "tipo": tipo_movimiento}).execute()
-    return RedirectResponse(f"/movimientos/nuevo/{tarjeta_nombre}", status_code=303)
+    supabase.table("movimientos").insert({
+        "tarjeta": tarjeta_nombre, 
+        "concepto": concepto, 
+        "monto": monto_f, 
+        "fecha": fecha, 
+        "usuario_id": user["id"], 
+        "tipo": tipo_movimiento
+    }).execute()
+    
+    # Añadimos '?success=true' a la URL para que el HTML sepa que acabamos de guardar
+    return RedirectResponse(f"/movimientos/nuevo/{tarjeta_nombre}?success=true", status_code=303)
