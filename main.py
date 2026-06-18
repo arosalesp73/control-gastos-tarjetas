@@ -102,30 +102,53 @@ async def rep_ui(request: Request):
 async def generar_excel(request: Request, tarjeta: str = "TODAS", fecha_inicio: str = None, fecha_fin: str = None):
     user = request.session.get("user")
     if not user: return RedirectResponse("/login")
+    
     query = supabase.table("movimientos").select("*").eq("usuario_id", user["id"])
     if tarjeta != "TODAS": query = query.eq("tarjeta", tarjeta)
     if fecha_inicio: query = query.gte("fecha", fecha_inicio)
     if fecha_fin: query = query.lte("fecha", fecha_fin)
     res = query.execute()
+    
     if not res.data: return RedirectResponse("/reportes")
+    
+    # 1. Crear DataFrame y asegurar orden cronológico (Antiguo a Reciente)
     df = pd.DataFrame(res.data)
     df["fecha"] = pd.to_datetime(df["fecha"], errors='coerce')
     df = df.dropna(subset=["fecha"]).sort_values(by="fecha", ascending=True)
+    
     df["fecha_limpia"] = df["fecha"].dt.strftime('%Y-%m-%d')
     df_final = df[["fecha_limpia", "concepto", "monto", "tipo"]].copy()
     df_final.columns = ["Fecha", "Concepto", "Monto", "Tipo"]
     df_final["Monto"] = df_final["Monto"].map("{:.2f}".format)
+    
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
         df_final.to_excel(writer, index=False, sheet_name='Mis Gastos')
         worksheet = writer.sheets['Mis Gastos']
-        for idx, col in enumerate(df_final.columns):
-            max_len = max(df_final[col].astype(str).map(len).max(), len(col)) + 2
-            worksheet.column_dimensions[chr(65 + idx)].width = max_len
+        
+        # 2. AUTO-AJUSTE DE CELDAS DINÁMICO (Mide el largo real de cada texto)
+        for col in worksheet.columns:
+            max_len = 0
+            col_letter = col[0].column_letter # Obtiene la letra de la columna de forma segura (A, B, C...)
+            for cell in col:
+                try:
+                    if cell.value:
+                        max_len = max(max_len, len(str(cell.value)))
+                except:
+                    pass
+            worksheet.column_dimensions[col_letter].width = max(max_len + 3, 12)
+            
     output.seek(0)
-    nombre_archivo = f"Reporte_{tarjeta}.xlsx"
-    return StreamingResponse(output, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                             headers={"Content-Disposition": f"attachment; filename={nombre_archivo}"})
+    
+    # 3. NOMBRE PERSONALIZADO DINÁMICO (Con la fecha de hoy)
+    fecha_hoy = datetime.now().strftime("%d-%m-%Y")
+    nombre_archivo = f"Reporte_{tarjeta}_{fecha_hoy}.xlsx"
+    
+    return StreamingResponse(
+        output, 
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename={nombre_archivo}"}
+    )
 
 @app.get("/admin/usuarios", response_class=HTMLResponse)
 async def panel_usuarios(request: Request):
