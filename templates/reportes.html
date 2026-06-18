@@ -12,6 +12,10 @@
         label { display: block; margin-bottom: 5px; color: #aaa; font-size: 0.85em; }
         select, input, button { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #444; background: #0f0f1a; color: white; box-sizing: border-box; }
         button { background: #6c63ff; border: none; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        
+        /* Estilo para el nuevo botón de WhatsApp */
+        .btn-whatsapp { background: #25D366; color: black; margin-top: 10px; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: bold; width: 100%; padding: 12px; border-radius: 8px; border: none; cursor: pointer; }
+        
         .back-link { display: block; text-align: center; margin-top: 20px; color: #666; text-decoration: none; font-size: 0.85em; }
     </style>
 </head>
@@ -19,10 +23,10 @@
     <div class="container">
         <div class="card">
             <h2>📊 Exportar Excel</h2>
-            <form action="/reportes/generar" method="get">
+            <form id="formReporte" action="/reportes/generar" method="get">
                 <div class="form-group">
                     <label>Seleccionar Tarjeta:</label>
-                    <select name="tarjeta">
+                    <select name="tarjeta" id="tarjeta">
                         <option value="TODAS">-- Todas las tarjetas --</option>
                         {% for t in tarjetas %}
                         <option value="{{ t.nombre_tarjeta }}">{{ t.nombre_tarjeta }}</option>
@@ -32,15 +36,17 @@
 
                 <div class="form-group">
                     <label>Desde:</label>
-                    <input type="date" name="fecha_inicio" required style="color-scheme: dark;">
+                    <input type="date" name="fecha_inicio" id="fecha_inicio" required style="color-scheme: dark;">
                 </div>
 
                 <div class="form-group">
                     <label>Hasta:</label>
-                    <input type="date" name="fecha_fin" required style="color-scheme: dark;">
+                    <input type="date" name="fecha_fin" id="fecha_fin" required style="color-scheme: dark;">
                 </div>
 
                 <button type="submit">Descargar Reporte</button>
+                
+                <button type="button" class="btn-whatsapp" onclick="compartirWhatsApp()">💬 Compartir por WhatsApp</button>
             </form>
             <a href="/" class="back-link">Volver al Inicio</a>
         </div>
@@ -52,6 +58,22 @@
         const primero = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
         document.getElementsByName('fecha_inicio')[0].value = primero;
         document.getElementsByName('fecha_fin')[0].value = hoy;
+
+        // Función para enviar los datos seleccionados mediante texto a WhatsApp
+        function compartirWhatsApp() {
+            const tarjeta = document.getElementById('tarjeta').value;
+            const inicio = document.getElementById('fecha_inicio').value;
+            const fin = document.getElementById('fecha_fin').value;
+            
+            // Texto personalizado que se enviará
+            const texto = `Hola, te comparto el reporte de gastos solicitado.%0A%0A💳 *Tarjeta:* ${tarjeta}%0A📅 *Periodo:* Del ${inicio} al ${fin}`;
+            
+            // Enlace universal de WhatsApp
+            const urlWhatsApp = `https://wa.me/?text=${texto}`;
+            
+            // Abre WhatsApp en el celular o PC
+            window.open(urlWhatsApp, '_blank');
+        }
     </script>
 </body>
 </html>
