@@ -155,14 +155,6 @@ async def enviar_excel_whatsapp(request: Request, tarjeta: str = "TODAS", fecha_
     user = request.session.get("user")
     if not user: return RedirectResponse("/login")
     
-    # 1. Obtener los parámetros configurados en Render
-    WHATSAPP_PHONE = os.environ.get("WHATSAPP_PHONE")  # Tu número con código de país (ej. 521XXXXXXXXXX)
-    WHATSAPP_API_KEY = os.environ.get("WHATSAPP_API_KEY")  # La clave que te dará el bot
-    
-    # Si aún no están configurados en Render, te regresa a reportes para evitar que se caiga la app
-    if not WHATSAPP_PHONE or not WHATSAPP_API_KEY:
-        return RedirectResponse("/reportes")
-
     query = supabase.table("movimientos").select("*").eq("usuario_id", user["id"])
     if tarjeta != "TODAS": query = query.eq("tarjeta", tarjeta)
     if fecha_inicio: query = query.gte("fecha", fecha_inicio)
@@ -171,7 +163,7 @@ async def enviar_excel_whatsapp(request: Request, tarjeta: str = "TODAS", fecha_
     
     if not res.data: return RedirectResponse("/reportes")
     
-    # 2. Crear el DataFrame y ordenar cronológicamente
+    # 1. Crear el DataFrame y ordenar cronológicamente
     df = pd.DataFrame(res.data)
     df["fecha"] = pd.to_datetime(df["fecha"], errors='coerce')
     df = df.dropna(subset=["fecha"]).sort_values(by="fecha", ascending=True)
@@ -181,15 +173,14 @@ async def enviar_excel_whatsapp(request: Request, tarjeta: str = "TODAS", fecha_
     df_final.columns = ["Fecha", "Concepto", "Monto", "Tipo"]
     df_final["Monto"] = df_final["Monto"].map("{:.2f}".format)
     
-    # 3. Definir nombres y rutas del archivo local
-    fecha_hoy = datetime.now().strftime("%d-%m-%Y")
-    nombre_archivo = f"Reporte_{tarjeta}_{fecha_hoy}.xlsx"
+    # 2. Nombre del archivo único para que no se sobreescriba
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    nombre_archivo = f"Reporte_{tarjeta}_{timestamp}.xlsx"
     ruta_local = f"/tmp/{nombre_archivo}"
     
-    # Asegurar que el directorio temporal exista en Render
     os.makedirs("/tmp", exist_ok=True)
     
-    # 4. Crear el Excel y auto-ajustar las columnas
+    # 3. Crear el Excel con auto-ajuste de columnas
     with pd.ExcelWriter(ruta_local, engine='openpyxl') as writer:
         df_final.to_excel(writer, index=False, sheet_name='Mis Gastos')
         worksheet = writer.sheets['Mis Gastos']
@@ -202,45 +193,31 @@ async def enviar_excel_whatsapp(request: Request, tarjeta: str = "TODAS", fecha_
                 except: pass
             worksheet.column_dimensions[col_letter].width = max(max_len + 3, 12)
             
+    # 4. Subir a Supabase de forma permanente para que el enlace funcione siempre
     try:
-        # 5. Subir el archivo a Supabase Storage (Almacenamiento público)
         with open(ruta_local, "rb") as f:
             supabase.storage.from_("reportes").upload(
                 path=nombre_archivo,
                 file=f,
                 file_options={"content-type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}
             )
-            
-        # 6. Obtener la URL pública para que el Bot la pueda leer
-        url_publica = supabase.storage.from_("reportes").get_public_url(nombre_archivo)
         
-        # Texto del mensaje formateado para WhatsApp
-        texto_mensaje = f"📊 *Reporte automático generado*\n\n💳 *Tarjeta:* {tarjeta}\n📅 *Periodo:* Del {fecha_inicio} al {fecha_fin}"
+        # 5. Obtener la URL de descarga directa
+        url_descarga = supabase.storage.from_("reportes").get_public_url(nombre_archivo)
         
-        # 7. Mandar el Documento de Excel a través de CallMeBot
-        url_bot_doc = "https://api.callmebot.com/whatsapp.php"
-        parametros_doc = {
-            "phone": WHATSAPP_PHONE,
-            "apikey": WHATSAPP_API_KEY,
-            "document": url_publica,
-            "text": texto_mensaje
-        }
+        # Texto formateado para el chat
+        texto = f"📊 *Reporte de Gastos Automático*\n\n💳 *Tarjeta:* {tarjeta}\n📅 *Periodo:* Del {fecha_inicio} al {fecha_fin}\n\n📥 *Descargar archivo Excel aquí:* {url_descarga}"
         
-        async with httpx.AsyncClient() as client:
-            await client.get(url_bot_doc, params=parametros_doc, timeout=20)
-            
+        # Redirigir directamente al WhatsApp web/app con el texto completo
+        url_whatsapp = f"https://wa.me/?text={httpx.URL(texto)}"
+        return RedirectResponse(url_whatsapp)
+        
     except Exception as e:
-        print(f"Error en el envío: {e}")
-        
+        print(f"Error: {e}")
+        return RedirectResponse("/reportes")
     finally:
-        # 8. LIMPIEZA AUTOMÁTICA: Borra el archivo de Supabase y de Render para no dejar rastro
-        try:
-            supabase.storage.from_("reportes").remove([nombre_archivo])
-        except: pass
         if os.path.exists(ruta_local):
             os.remove(ruta_local)
-            
-    return RedirectResponse("/reportes")
 
 @app.get("/admin/usuarios", response_class=HTMLResponse)
 async def panel_usuarios(request: Request):
