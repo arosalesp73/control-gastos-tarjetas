@@ -155,6 +155,24 @@ async def enviar_excel_whatsapp(request: Request, tarjeta: str = "TODAS", fecha_
     user = request.session.get("user")
     if not user: return RedirectResponse("/login")
     
+    # === LIMPIEZA AUTOMÁTICA DE ARCHIVOS VIEJOS ===
+    try:
+        archivos_en_nube = supabase.storage.from_("reportes").list()
+        if archivos_en_nube:
+            for archivo in archivos_en_nube:
+                # Si el archivo tiene metadatos con fecha de creación
+                created_at_str = archivo.get("created_at")
+                if created_at_str:
+                    # Cortar el string para manejar el formato ISO de Supabase
+                    fecha_creacion = pd.to_datetime(created_at_str[:19])
+                    horas_vida = (datetime.utcnow() - fecha_creacion).total_seconds() / 3600
+                    # Si tiene más de 24 horas, se borra automáticamente
+                    if horas_vida > 24:
+                        supabase.storage.from_("reportes").remove([archivo["name"]])
+    except Exception as e:
+        print(f"Error limpiando archivos viejos: {e}")
+    # ==============================================
+
     query = supabase.table("movimientos").select("*").eq("usuario_id", user["id"])
     if tarjeta != "TODAS": query = query.eq("tarjeta", tarjeta)
     if fecha_inicio: query = query.gte("fecha", fecha_inicio)
