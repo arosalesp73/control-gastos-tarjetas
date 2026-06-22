@@ -112,7 +112,7 @@ async def generar_excel(request: Request, tarjeta: str = "TODAS", fecha_inicio: 
     
     if not res.data: return RedirectResponse("/reportes")
     
-    # 1. Crear DataFrame y asegurar orden cronológico (Antiguo a Reciente)
+    # 1. Crear DataFrame y asegurar orden cronológico
     df = pd.DataFrame(res.data)
     df["fecha"] = pd.to_datetime(df["fecha"], errors='coerce')
     df = df.dropna(subset=["fecha"]).sort_values(by="fecha", ascending=True)
@@ -127,10 +127,10 @@ async def generar_excel(request: Request, tarjeta: str = "TODAS", fecha_inicio: 
         df_final.to_excel(writer, index=False, sheet_name='Mis Gastos')
         worksheet = writer.sheets['Mis Gastos']
         
-        # 2. AUTO-AJUSTE DE CELDAS DINÁMICO (Mide el largo real de cada texto)
+        # 2. Auto-ajuste de celdas dinámico
         for col in worksheet.columns:
             max_len = 0
-            col_letter = col[0].column_letter # Obtiene la letra de la columna de forma segura (A, B, C...)
+            col_letter = col[0].column_letter
             for cell in col:
                 try:
                     if cell.value:
@@ -141,8 +141,8 @@ async def generar_excel(request: Request, tarjeta: str = "TODAS", fecha_inicio: 
             
     output.seek(0)
     
-    # 3. NOMBRE PERSONALIZADO DINÁMICO (Con la fecha de hoy)
-fecha_hoy = datetime.now().strftime("%d-%m-%Y")
+    # 3. Nombre personalizado dinámico con cabecera expuesta para JS
+    fecha_hoy = datetime.now().strftime("%d-%m-%Y")
     nombre_archivo = f"Reporte_{tarjeta}_{fecha_hoy}.xlsx"
     
     return StreamingResponse(
