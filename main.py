@@ -142,13 +142,16 @@ async def generar_excel(request: Request, tarjeta: str = "TODAS", fecha_inicio: 
     output.seek(0)
     
     # 3. NOMBRE PERSONALIZADO DINÁMICO (Con la fecha de hoy)
-    fecha_hoy = datetime.now().strftime("%d-%m-%Y")
+fecha_hoy = datetime.now().strftime("%d-%m-%Y")
     nombre_archivo = f"Reporte_{tarjeta}_{fecha_hoy}.xlsx"
     
     return StreamingResponse(
         output, 
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={"Content-Disposition": f"attachment; filename={nombre_archivo}"}
+        headers={
+            "Content-Disposition": f"attachment; filename={nombre_archivo}",
+            "Access-Control-Expose-Headers": "Content-Disposition"
+        }
     )
 
 @app.get("/reportes/whatsapp")
