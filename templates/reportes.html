@@ -10,7 +10,7 @@
         .card { background: var(--surface); padding: 25px; border-radius: 12px; border: 1px solid #333; }
         .form-group { margin-bottom: 15px; }
         label { display: block; margin-bottom: 5px; color: #aaa; font-size: 0.85em; }
-        select, input, button { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #444; background: #0f0f1a; color: white; box-sizing: border-box; }
+        select, input, button { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #444; background: #0f0f1a; color: white; box-box-sizing: border-box; }
         button { background: #6c63ff; border: none; font-weight: bold; cursor: pointer; margin-top: 10px; }
         
         /* Botón verde para WhatsApp definitivo */
@@ -46,7 +46,7 @@
 
                 <button type="button" onclick="ejecutarAccion('/reportes/excel')">Descargar Reporte</button>
                 
-                <button type="button" class="btn-whatsapp" onclick="ejecutarAccion('/reportes/whatsapp')">🚀 Enviar Directo a WhatsApp</button>
+                <button type="button" class="btn-whatsapp" onclick="prepararEnvioDirecto()">🚀 Enviar Directo a WhatsApp</button>
             </form>
             <a href="/" class="back-link">Volver al Inicio</a>
         </div>
@@ -59,11 +59,46 @@
         document.getElementsByName('fecha_inicio')[0].value = primero;
         document.getElementsByName('fecha_fin')[0].value = hoy;
 
-        // Función inteligente para cambiar la ruta según el botón que presiones
+        // Función normal para descarga local
         function ejecutarAccion(ruta) {
             const formulario = document.getElementById('formReporte');
             formulario.action = ruta;
             formulario.submit();
+        }
+
+        // Arma la URL con los parámetros correctos y detona la joya de compartir
+        function prepararEnvioDirecto() {
+            const tarjeta = document.getElementById('tarjeta').value;
+            const inicio = document.getElementById('fecha_inicio').value;
+            const fin = document.getElementById('fecha_fin').value;
+            
+            // Construimos la ruta de tu excel tradicional con sus filtros
+            const urlDescarga = `/reportes/excel?tarjeta=${tarjeta}&fecha_inicio=${inicio}&fecha_fin=${fin}`;
+            const nombreArchivo = `Reporte_${tarjeta}_${hoy}.xlsx`;
+            
+            compartirFisico(urlDescarga, nombreArchivo);
+        }
+
+        // Tu función estrella adaptada para archivos físicos de Excel (.xlsx)
+        async function compartirFisico(url, nombre) {
+            try {
+                const res = await fetch(url); 
+                const blob = await res.blob();
+                const file = new File([blob], nombre, { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+                
+                if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                    await navigator.share({ 
+                        files: [file], 
+                        title: 'Reporte de Gastos', 
+                        text: nombre 
+                    });
+                } else {
+                    alert("Tu navegador o dispositivo no soporta el envío directo de archivos físicos.");
+                }
+            } catch (e) { 
+                console.error(e); 
+                alert("Hubo un error al procesar el archivo.");
+            }
         }
     </script>
 </body>
