@@ -80,29 +80,33 @@
         }
 
         // Función estrella corregida para asegurar la lectura del Blob
-        async function compartirFisico(url, nombre) {
+async function compartirFisico(url, nombre) {
             try {
                 const res = await fetch(url);
-                if (!res.ok) {
-                    throw new Error("Error en la respuesta del servidor");
-                }
-                const blob = await res.blob();
                 
-                // Creamos el archivo listo para compartir
+                // Si el servidor responde con un error (como el 404 de falta de datos)
+                if (!res.ok) {
+                    const textoError = await res.text();
+                    alert(`Error del Servidor (${res.status}): ${textoError || 'No hay datos en esas fechas'}`);
+                    return;
+                }
+                
+                const blob = await res.blob();
                 const file = new File([blob], nombre, { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
                 
                 if (navigator.canShare && navigator.canShare({ files: [file] })) {
                     await navigator.share({ 
                         files: [file], 
                         title: 'Reporte de Gastos', 
-                        text: `Aquí tienes el reporte de la tarjeta: ${nombre}`
+                        text: `Reporte: ${nombre}`
                     });
                 } else {
                     alert("Tu navegador o dispositivo no soporta el envío directo de archivos físicos.");
                 }
             } catch (e) { 
-                console.error("Error detallado:", e); 
-                alert("Hubo un error al procesar o descargar el archivo del servidor.");
+                // Esto nos dirá si el navegador bloqueó la petición por seguridad o red
+                alert(`Error del Navegador: ${e.message}`);
+                console.error(e);
             }
         }
         
