@@ -110,7 +110,8 @@ async def generar_excel(request: Request, tarjeta: str = "TODAS", fecha_inicio: 
     if fecha_fin: query = query.lte("fecha", fecha_fin)
     res = query.execute()
     
-    if not res.data: return RedirectResponse("/reportes")
+    if not res.data: 
+        raise HTTPException(status_code=404, detail="No se encontraron movimientos para los filtros seleccionados.")
     
     df = pd.DataFrame(res.data)
     df["fecha"] = pd.to_datetime(df["fecha"], errors='coerce')
