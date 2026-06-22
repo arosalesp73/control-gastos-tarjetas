@@ -52,64 +52,32 @@
         </div>
     </div>
 
-    <script>
+<script>
         // Pre-llenar fechas (primer día del mes actual y hoy)
         const hoy = new Date().toISOString().split('T')[0];
         const primero = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
         document.getElementsByName('fecha_inicio')[0].value = primero;
         document.getElementsByName('fecha_fin')[0].value = hoy;
 
-        // Función normal para descarga local
+        // Función tradicional para descargar el reporte en PC o Móvil
         function ejecutarAccion(ruta) {
             const formulario = document.getElementById('formReporte');
             formulario.action = ruta;
             formulario.submit();
         }
 
-// Arma la URL con los parámetros correctos y detona la joya de compartir
+        // Solución definitiva para envío directo: descarga nativa limpia sin bloqueos de permisos
         function prepararEnvioDirecto() {
             const tarjeta = document.getElementById('tarjeta').value;
             const inicio = document.getElementById('fecha_inicio').value;
             const fin = document.getElementById('fecha_fin').value;
             
-            // Usamos el origen dinámico de la página actual (https://control-gastos-tarjetas.onrender.com)
+            // Construimos la URL con los filtros correspondientes
             const urlDescarga = `${window.location.origin}/reportes/excel?tarjeta=${tarjeta}&fecha_inicio=${inicio}&fecha_fin=${fin}`;
-            const nombreArchivo = `Reporte_${tarjeta}_${hoy}.xlsx`;
             
-            compartirFisico(urlDescarga, nombreArchivo);
+            // Abrimos la descarga en una pestaña o flujo directo para evitar el bloqueo asíncrono "Permission Denied"
+            window.location.href = urlDescarga;
         }
-
-        // Función estrella corregida para asegurar la lectura del Blob
-async function compartirFisico(url, nombre) {
-            try {
-                const res = await fetch(url);
-                
-                // Si el servidor responde con un error (como el 404 de falta de datos)
-                if (!res.ok) {
-                    const textoError = await res.text();
-                    alert(`Error del Servidor (${res.status}): ${textoError || 'No hay datos en esas fechas'}`);
-                    return;
-                }
-                
-                const blob = await res.blob();
-                const file = new File([blob], nombre, { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
-                
-                if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                    await navigator.share({ 
-                        files: [file], 
-                        title: 'Reporte de Gastos', 
-                        text: `Reporte: ${nombre}`
-                    });
-                } else {
-                    alert("Tu navegador o dispositivo no soporta el envío directo de archivos físicos.");
-                }
-            } catch (e) { 
-                // Esto nos dirá si el navegador bloqueó la petición por seguridad o red
-                alert(`Error del Navegador: ${e.message}`);
-                console.error(e);
-            }
-        }
-        
     </script>
 </body>
 </html>
