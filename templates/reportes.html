@@ -66,40 +66,46 @@
             formulario.submit();
         }
 
-        // Arma la URL con los parámetros correctos y detona la joya de compartir
+// Arma la URL con los parámetros correctos y detona la joya de compartir
         function prepararEnvioDirecto() {
             const tarjeta = document.getElementById('tarjeta').value;
             const inicio = document.getElementById('fecha_inicio').value;
             const fin = document.getElementById('fecha_fin').value;
             
-            // Construimos la ruta de tu excel tradicional con sus filtros
-            const urlDescarga = `/reportes/excel?tarjeta=${tarjeta}&fecha_inicio=${inicio}&fecha_fin=${fin}`;
+            // Usamos el origen dinámico de la página actual (https://control-gastos-tarjetas.onrender.com)
+            const urlDescarga = `${window.location.origin}/reportes/excel?tarjeta=${tarjeta}&fecha_inicio=${inicio}&fecha_fin=${fin}`;
             const nombreArchivo = `Reporte_${tarjeta}_${hoy}.xlsx`;
             
             compartirFisico(urlDescarga, nombreArchivo);
         }
 
-        // Tu función estrella adaptada para archivos físicos de Excel (.xlsx)
+        // Función estrella corregida para asegurar la lectura del Blob
         async function compartirFisico(url, nombre) {
             try {
-                const res = await fetch(url); 
+                const res = await fetch(url);
+                if (!res.ok) {
+                    throw new Error("Error en la respuesta del servidor");
+                }
                 const blob = await res.blob();
+                
+                // Creamos el archivo listo para compartir
                 const file = new File([blob], nombre, { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
                 
                 if (navigator.canShare && navigator.canShare({ files: [file] })) {
                     await navigator.share({ 
                         files: [file], 
                         title: 'Reporte de Gastos', 
-                        text: nombre 
+                        text: `Aquí tienes el reporte de la tarjeta: ${nombre}`
                     });
                 } else {
                     alert("Tu navegador o dispositivo no soporta el envío directo de archivos físicos.");
                 }
             } catch (e) { 
-                console.error(e); 
-                alert("Hubo un error al procesar el archivo.");
+                console.error("Error detallado:", e); 
+                alert("Hubo un error al procesar o descargar el archivo del servidor.");
             }
         }
+        
     </script>
 </body>
 </html>
