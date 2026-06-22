@@ -4,6 +4,7 @@ import pandas as pd
 import httpx
 import threading
 import time
+import urllib.parse
 from datetime import datetime
 from fastapi import FastAPI, Form, Request, HTTPException, Response
 from fastapi.responses import HTMLResponse, StreamingResponse, RedirectResponse
@@ -227,7 +228,9 @@ async def enviar_excel_whatsapp(request: Request, tarjeta: str = "TODAS", fecha_
         texto = f"📊 *Reporte de Gastos Automático*\n\n💳 *Tarjeta:* {tarjeta}\n📅 *Periodo:* Del {fecha_inicio} al {fecha_fin}\n\n📥 *Descargar archivo Excel aquí:* {url_descarga}"
         
         # Redirigir directamente al WhatsApp web/app con el texto completo
-        url_whatsapp = f"https://wa.me/?text={httpx.URL(texto)}"
+        texto_codificado = urllib.parse.quote(texto)
+        url_whatsapp = f"https://wa.me/?text={texto_codificado}"
+    
         return RedirectResponse(url_whatsapp)
         
     except Exception as e:
