@@ -112,7 +112,6 @@ async def generar_excel(request: Request, tarjeta: str = "TODAS", fecha_inicio: 
     
     if not res.data: return RedirectResponse("/reportes")
     
-    # 1. Crear DataFrame y asegurar orden cronológico
     df = pd.DataFrame(res.data)
     df["fecha"] = pd.to_datetime(df["fecha"], errors='coerce')
     df = df.dropna(subset=["fecha"]).sort_values(by="fecha", ascending=True)
@@ -127,7 +126,6 @@ async def generar_excel(request: Request, tarjeta: str = "TODAS", fecha_inicio: 
         df_final.to_excel(writer, index=False, sheet_name='Mis Gastos')
         worksheet = writer.sheets['Mis Gastos']
         
-        # 2. Auto-ajuste de celdas dinámico
         for col in worksheet.columns:
             max_len = 0
             col_letter = col[0].column_letter
@@ -141,7 +139,6 @@ async def generar_excel(request: Request, tarjeta: str = "TODAS", fecha_inicio: 
             
     output.seek(0)
     
-    # 3. Nombre personalizado dinámico con cabecera expuesta para JS
     fecha_hoy = datetime.now().strftime("%d-%m-%Y")
     nombre_archivo = f"Reporte_{tarjeta}_{fecha_hoy}.xlsx"
     
@@ -153,95 +150,6 @@ async def generar_excel(request: Request, tarjeta: str = "TODAS", fecha_inicio: 
             "Access-Control-Expose-Headers": "Content-Disposition"
         }
     )
-
-@app.get("/reportes/whatsapp")
-async def enviar_excel_whatsapp(request: Request, tarjeta: str = "TODAS", fecha_inicio: str = None, fecha_fin: str = None):
-    user = request.session.get("user")
-    if not user: return RedirectResponse("/login")
-    
-    # === LIMPIEZA AUTOMÁTICA DE ARCHIVOS VIEJOS ===
-    try:
-        archivos_en_nube = supabase.storage.from_("reportes").list()
-        if archivos_en_nube:
-            for archivo in archivos_en_nube:
-                # Si el archivo tiene metadatos con fecha de creación
-                created_at_str = archivo.get("created_at")
-                if created_at_str:
-                    # Cortar el string para manejar el formato ISO de Supabase
-                    fecha_creacion = pd.to_datetime(created_at_str[:19])
-                    horas_vida = (datetime.utcnow() - fecha_creacion).total_seconds() / 3600
-                    # Si tiene más de 24 horas, se borra automáticamente
-                    if horas_vida > 24:
-                        supabase.storage.from_("reportes").remove([archivo["name"]])
-    except Exception as e:
-        print(f"Error limpiando archivos viejos: {e}")
-    # ==============================================
-
-    query = supabase.table("movimientos").select("*").eq("usuario_id", user["id"])
-    if tarjeta != "TODAS": query = query.eq("tarjeta", tarjeta)
-    if fecha_inicio: query = query.gte("fecha", fecha_inicio)
-    if fecha_fin: query = query.lte("fecha", fecha_fin)
-    res = query.execute()
-    
-    if not res.data: return RedirectResponse("/reportes")
-    
-    # 1. Crear el DataFrame y ordenar cronológicamente
-    df = pd.DataFrame(res.data)
-    df["fecha"] = pd.to_datetime(df["fecha"], errors='coerce')
-    df = df.dropna(subset=["fecha"]).sort_values(by="fecha", ascending=True)
-    
-    df["fecha_limpia"] = df["fecha"].dt.strftime('%Y-%m-%d')
-    df_final = df[["fecha_limpia", "concepto", "monto", "tipo"]].copy()
-    df_final.columns = ["Fecha", "Concepto", "Monto", "Tipo"]
-    df_final["Monto"] = df_final["Monto"].map("{:.2f}".format)
-    
-    # 2. Nombre del archivo único para que no se sobreescriba
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    nombre_archivo = f"Reporte_{tarjeta}_{timestamp}.xlsx"
-    ruta_local = f"/tmp/{nombre_archivo}"
-    
-    os.makedirs("/tmp", exist_ok=True)
-    
-    # 3. Crear el Excel con auto-ajuste de columnas
-    with pd.ExcelWriter(ruta_local, engine='openpyxl') as writer:
-        df_final.to_excel(writer, index=False, sheet_name='Mis Gastos')
-        worksheet = writer.sheets['Mis Gastos']
-        for col in worksheet.columns:
-            max_len = 0
-            col_letter = col[0].column_letter
-            for cell in col:
-                try:
-                    if cell.value: max_len = max(max_len, len(str(cell.value)))
-                except: pass
-            worksheet.column_dimensions[col_letter].width = max(max_len + 3, 12)
-            
-    # 4. Subir a Supabase de forma permanente para que el enlace funcione siempre
-    try:
-        with open(ruta_local, "rb") as f:
-            supabase.storage.from_("reportes").upload(
-                path=nombre_archivo,
-                file=f,
-                file_options={"content-type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}
-            )
-        
-        # 5. Obtener la URL de descarga directa
-        url_descarga = supabase.storage.from_("reportes").get_public_url(nombre_archivo)
-        
-        # Texto formateado para el chat
-        texto = f"📊 *Reporte de Gastos Automático*\n\n💳 *Tarjeta:* {tarjeta}\n📅 *Periodo:* Del {fecha_inicio} al {fecha_fin}\n\n📥 *Descargar archivo Excel aquí:* {url_descarga}"
-        
-        # Redirigir directamente al WhatsApp web/app con el texto completo
-        texto_codificado = urllib.parse.quote(texto)
-        url_whatsapp = f"https://wa.me/?text={texto_codificado}"
-    
-        return RedirectResponse(url_whatsapp)
-        
-    except Exception as e:
-        print(f"Error: {e}")
-        return RedirectResponse("/reportes")
-    finally:
-        if os.path.exists(ruta_local):
-            os.remove(ruta_local)
 
 @app.get("/admin/usuarios", response_class=HTMLResponse)
 async def panel_usuarios(request: Request):
@@ -319,7 +227,7 @@ async def e_tarjeta(request: Request, nombre: str):
     return RedirectResponse("/", status_code=303)
 
 @app.get("/movimientos/nuevo/{tarjeta}", response_class=HTMLResponse)
-async def n_mov(request: Request, tarjeta: str, success: bool = False): # Añade success aquí
+async def n_mov(request: Request, tarjeta: str, success: bool = False):
     user = request.session.get("user")
     if not user: return RedirectResponse("/login")
     res = supabase.table("movimientos").select("*").eq("tarjeta", tarjeta).eq("usuario_id", user["id"]).order("id", desc=True).limit(5).execute()
@@ -329,7 +237,7 @@ async def n_mov(request: Request, tarjeta: str, success: bool = False): # Añade
         "nombre_tarjeta": tarjeta, 
         "movimientos": res.data, 
         "css": DARK_CSS,
-        "success": success # Lo pasamos al HTML
+        "success": success
     })
 
 @app.post("/movimientos/guardar")
@@ -347,5 +255,4 @@ async def g_mov(request: Request, tarjeta_nombre: str = Form(...), concepto: str
         "tipo": tipo_movimiento
     }).execute()
     
-    # Añadimos '?success=true' a la URL para que el HTML sepa que acabamos de guardar
     return RedirectResponse(f"/movimientos/nuevo/{tarjeta_nombre}?success=true", status_code=303)
