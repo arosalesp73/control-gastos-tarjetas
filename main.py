@@ -5,6 +5,7 @@ import httpx
 import threading
 import time
 import urllib.parse
+from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime
 from fastapi import FastAPI, Form, Request, HTTPException, Response
 from fastapi.responses import HTMLResponse, StreamingResponse, RedirectResponse
@@ -13,6 +14,14 @@ from starlette.middleware.sessions import SessionMiddleware
 from supabase import create_client, Client
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Permite peticiones desde cualquier origen (incluyendo tu app/celular)
+    allow_credentials=True,
+    allow_methods=["*"],  # Permite todos los métodos (GET, POST, etc.)
+    allow_headers=["*"],  # Permite todas las cabeceras
+)
 
 # --- CONFIGURACIÓN DE SESIONES ---
 app.add_middleware(SessionMiddleware, secret_key=os.environ.get("SESSION_SECRET", "12345"))
