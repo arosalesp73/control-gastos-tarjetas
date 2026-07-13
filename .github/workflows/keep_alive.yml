@@ -1,1 +1,48 @@
+name: Supabase Keep Alive
 
+on:
+  schedule:
+    # Se ejecuta a las 00:00 UTC los lunes y jueves (2 veces por semana)
+    - cron: '0 0 * * 1,4'
+  workflow_dispatch: # Permite ejecutarlo manualmente desde GitHub
+
+jobs:
+  despertador:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Configurar Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+
+    - name: Instalar librería de Supabase
+      run: |
+        python -m pip install --upgrade pip
+        pip install supabase
+
+    - name: Ejecutar script despertador
+      env:
+        SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+        SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+      run: |
+        python << 'EOF'
+        import os
+        from supabase import create_client, Client
+
+        url = os.environ.get('SUPABASE_URL')
+        key = os.environ.get('SUPABASE_KEY')
+
+        if not url or not key:
+            print('❌ Error: Faltan las credenciales en los Secrets de GitHub.')
+            exit(1)
+
+        try:
+            supabase: Client = create_client(url, key)
+            # Consulta ligera a tu tabla específica
+            respuesta = supabase.table('registro movimientos TDCs').select('*').limit(1).execute()
+            print('✅ Proyecto despertado con éxito de forma automática.')
+        except Exception as e:
+            print(f'❌ Ocurrió un error al conectar con Supabase: {e}')
+            exit(1)
+        EOF
