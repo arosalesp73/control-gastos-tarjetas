@@ -2,9 +2,8 @@ name: Supabase Keep Alive
 
 on:
   schedule:
-    # Se ejecuta a las 00:00 UTC los lunes y jueves (2 veces por semana)
     - cron: '0 0 * * 1,4'
-  workflow_dispatch: # Permite ejecutarlo manualmente desde GitHub
+  workflow_dispatch:
 
 jobs:
   despertador:
@@ -39,7 +38,6 @@ jobs:
 
         try:
             supabase: Client = create_client(url, key)
-            # Consulta ligera a tu tabla específica
             respuesta = supabase.table('registro movimientos TDCs').select('*').limit(1).execute()
             print('✅ Proyecto despertado con éxito de forma automática.')
         except Exception as e:
