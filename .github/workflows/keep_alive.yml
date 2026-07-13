@@ -38,7 +38,7 @@ jobs:
 
         try:
             supabase: Client = create_client(url, key)
-            respuesta = supabase.table('registro movimientos TDCs').select('*').limit(1).execute()
+            respuesta = supabase.table('movimientos').select('*').limit(1).execute()
             print('✅ Proyecto despertado con éxito de forma automática.')
         except Exception as e:
             print(f'❌ Ocurrió un error al conectar con Supabase: {e}')
