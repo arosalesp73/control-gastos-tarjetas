@@ -59,41 +59,17 @@
     document.getElementsByName('fecha_inicio')[0].value = primero;
     document.getElementsByName('fecha_fin')[0].value = hoy;
 
-    // Función asíncrona para descargar sin recargar la página
-    async function ejecutarAccion(ruta) {
-        const tarjeta = document.getElementById('tarjeta').value;
-        const inicio = document.getElementById('fecha_inicio').value;
-        const fin = document.getElementById('fecha_fin').value;
-        const url = `${window.location.origin}${ruta}?tarjeta=${tarjeta}&fecha_inicio=${inicio}&fecha_fin=${fin}`;
-
-        try {
-            const respuesta = await fetch(url);
-            const contentType = respuesta.headers.get("content-type");
-
-            // Si el servidor envía un archivo Excel
-            if (contentType && (contentType.includes("excel") || contentType.includes("spreadsheetml") || contentType.includes("officedocument"))) {
-                const blob = await respuesta.blob();
-                const urlBlob = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = urlBlob;
-                a.download = `Reporte_${tarjeta}.xlsx`;
-                document.body.appendChild(a);
-                a.click();
-                a.remove();
-                window.URL.revokeObjectURL(urlBlob);
-            } else {
-                // Si el servidor manda la alerta de vacío
-                alert("No hay registros en este periodo para generar el reporte.");
-            }
-        } catch (error) {
-            alert("Error al conectar con el servidor.");
-        }
+    // Función directa compatible con móviles para descargar
+    function ejecutarAccion(ruta) {
+        const formulario = document.getElementById('formReporte');
+        formulario.action = ruta;
+        formulario.method = 'get';
+        formulario.submit();
     }
 
-    // Solución definitiva para envío directo sin bloqueos
-    async function prepararEnvioDirecto() {
-        // Reutilizamos la misma lógica limpia para evitar el flasheo en la app móvil
-        await ejecutarAccion('/reportes/excel');
+    function prepararEnvioDirecto() {
+        // Aquí puedes ajustar la ruta si tienes una específica para WhatsApp
+        ejecutarAccion('/reportes/excel');
     }
 </script>
 </body>
