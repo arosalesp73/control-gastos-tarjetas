@@ -53,31 +53,48 @@
     </div>
 
 <script>
-        // Pre-llenar fechas (primer día del mes actual y hoy)
-        const hoy = new Date().toISOString().split('T')[0];
-        const primero = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
-        document.getElementsByName('fecha_inicio')[0].value = primero;
-        document.getElementsByName('fecha_fin')[0].value = hoy;
+    // Pre-llenar fechas (primer día del mes actual y hoy)
+    const hoy = new Date().toISOString().split('T')[0];
+    const primero = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
+    document.getElementsByName('fecha_inicio')[0].value = primero;
+    document.getElementsByName('fecha_fin')[0].value = hoy;
 
-        // Función tradicional para descargar el reporte en PC o Móvil
-        function ejecutarAccion(ruta) {
-            const formulario = document.getElementById('formReporte');
-            formulario.action = ruta;
-            formulario.submit();
-        }
+    // Función asíncrona para descargar sin recargar la página
+    async function ejecutarAccion(ruta) {
+        const tarjeta = document.getElementById('tarjeta').value;
+        const inicio = document.getElementById('fecha_inicio').value;
+        const fin = document.getElementById('fecha_fin').value;
+        const url = `${window.location.origin}${ruta}?tarjeta=${tarjeta}&fecha_inicio=${inicio}&fecha_fin=${fin}`;
 
-        // Solución definitiva para envío directo: descarga nativa limpia sin bloqueos de permisos
-        function prepararEnvioDirecto() {
-            const tarjeta = document.getElementById('tarjeta').value;
-            const inicio = document.getElementById('fecha_inicio').value;
-            const fin = document.getElementById('fecha_fin').value;
-            
-            // Construimos la URL con los filtros correspondientes
-            const urlDescarga = `${window.location.origin}/reportes/excel?tarjeta=${tarjeta}&fecha_inicio=${inicio}&fecha_fin=${fin}`;
-            
-            // Abrimos la descarga en una pestaña o flujo directo para evitar el bloqueo asíncrono "Permission Denied"
-            window.location.href = urlDescarga;
+        try {
+            const respuesta = await fetch(url);
+            const contentType = respuesta.headers.get("content-type");
+
+            // Si el servidor envía un archivo Excel
+            if (contentType && (contentType.includes("excel") || contentType.includes("spreadsheetml") || contentType.includes("officedocument"))) {
+                const blob = await respuesta.blob();
+                const urlBlob = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = urlBlob;
+                a.download = `Reporte_${tarjeta}.xlsx`;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                window.URL.revokeObjectURL(urlBlob);
+            } else {
+                // Si el servidor manda la alerta de vacío
+                alert("No hay registros en este periodo para generar el reporte.");
+            }
+        } catch (error) {
+            alert("Error al conectar con el servidor.");
         }
-    </script>
+    }
+
+    // Solución definitiva para envío directo sin bloqueos
+    async function prepararEnvioDirecto() {
+        // Reutilizamos la misma lógica limpia para evitar el flasheo en la app móvil
+        await ejecutarAccion('/reportes/excel');
+    }
+</script>
 </body>
 </html>
