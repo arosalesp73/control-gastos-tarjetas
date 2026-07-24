@@ -12,8 +12,27 @@ from fastapi.responses import HTMLResponse, StreamingResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
 from supabase import create_client, Client
+from fastapi.responses import HTMLResponse, FileResponse
 
 app = FastAPI()
+
+@app.get("/reportes/excel")
+def exportar_excel(tarjeta: str, fecha_inicio: str, fecha_fin: str, db = Depends(obtener_conexion)):
+    # Aquí haces tu consulta a Supabase para obtener los registros
+    registros = ... # tu consulta SQL o de Supabase
+
+    # Si no hay datos, pegas este bloque que te pasé:
+    if not registros:
+        return HTMLResponse(
+            content="""
+            <script>
+                alert('No hay registros en este periodo para generar el reporte.');
+                window.history.back();
+            </script>
+            """
+        )
+    
+    # Si sí hay registros, continuas con la generación normal de tu Excel...
 
 app.add_middleware(
     CORSMiddleware,
