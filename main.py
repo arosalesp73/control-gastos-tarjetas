@@ -12,34 +12,15 @@ from fastapi.responses import HTMLResponse, StreamingResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
 from supabase import create_client, Client
-from fastapi.responses import HTMLResponse, FileResponse
 
 app = FastAPI()
 
-@app.get("/reportes/excel")
-def exportar_excel(tarjeta: str, fecha_inicio: str, fecha_fin: str, db = Depends(obtener_conexion)):
-    # Aquí haces tu consulta a Supabase para obtener los registros
-    registros = ... # tu consulta SQL o de Supabase
-
-    # Si no hay datos, pegas este bloque que te pasé:
-    if not registros:
-        return HTMLResponse(
-            content="""
-            <script>
-                alert('No hay registros en este periodo para generar el reporte.');
-                window.history.back();
-            </script>
-            """
-        )
-    
-    # Si sí hay registros, continuas con la generación normal de tu Excel...
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Permite peticiones desde cualquier origen (incluyendo tu app/celular)
+    allow_origins=["*"],
     allow_credentials=True,
-    allow_methods=["*"],  # Permite todos los métodos (GET, POST, etc.)
-    allow_headers=["*"],  # Permite todas las cabeceras
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # --- CONFIGURACIÓN DE SESIONES ---
@@ -226,7 +207,7 @@ async def f_nueva(request: Request):
     if not user: return RedirectResponse("/login")
     return templates.TemplateResponse("nueva_tarjeta.html", {"request": request, "user": user, "css": DARK_CSS})
 
-@app.post("/tarjetas/guardar")
+@app.post("/tarjetas/guardار")
 async def g_tarjeta(request: Request, nombre_tarjeta: str = Form(...), dia_corte: int = Form(...), dia_pago: int = Form(...)):
     user = request.session.get("user")
     if not user: return RedirectResponse("/login")
