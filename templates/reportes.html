@@ -10,7 +10,7 @@
         .card { background: var(--surface); padding: 25px; border-radius: 12px; border: 1px solid #333; }
         .form-group { margin-bottom: 15px; }
         label { display: block; margin-bottom: 5px; color: #aaa; font-size: 0.85em; }
-        select, input, button { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #444; background: #0f0f1a; color: white; box-box-sizing: border-box; }
+        select, input, button { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #444; background: #0f0f1a; color: white; box-sizing: border-box; }
         button { background: #6c63ff; border: none; font-weight: bold; cursor: pointer; margin-top: 10px; }
         
         /* Botón verde para WhatsApp definitivo */
@@ -23,7 +23,7 @@
     <div class="container">
         <div class="card">
             <h2>📊 Exportar Excel</h2>
-            <form id="formReporte" method="get">
+            <form id="formReporte" action="/reportes/excel" method="get">
                 <div class="form-group">
                     <label>Seleccionar Tarjeta:</label>
                     <select name="tarjeta" id="tarjeta">
@@ -68,7 +68,6 @@
     }
 
     function prepararEnvioDirecto() {
-        // Aquí puedes ajustar la ruta si tienes una específica para WhatsApp
         ejecutarAccion('/reportes/excel');
     }
 </script>
