@@ -65,11 +65,13 @@
         const url = `/reportes/excel?tarjeta=${encodeURIComponent(tarjeta)}&fecha_inicio=${inicio}&fecha_fin=${fin}`;
         const res = await fetch(url);
         
-        const contentType = res.headers.get("content-type");
-        if (contentType && contentType.includes("text/html")) {
+        const contentType = res.headers.get("content-type") || "";
+        
+        if (!res.ok || contentType.includes("html") || contentType.includes("json")) {
             alert("No hay registros en este periodo.");
             return null;
         }
+        
         return res;
     }
 
