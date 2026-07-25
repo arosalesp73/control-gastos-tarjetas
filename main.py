@@ -100,7 +100,7 @@ async def logout(request: Request):
     response.delete_cookie("session")
     return response
 
-@app.get("/reportes", response_class=HTMLResponse)
+@app.get("/reportes-v2", response_class=HTMLResponse)
 async def rep_ui(request: Request, response: Response):
     response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
     response.headers["Pragma"] = "no-cache"
