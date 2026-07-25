@@ -68,7 +68,11 @@
         const contentType = res.headers.get("content-type") || "";
         
         if (!res.ok || contentType.includes("html") || contentType.includes("json")) {
-            alert("No hay registros en este periodo.");
+            const aviso = document.createElement("div");
+            aviso.innerHTML = "No hay registros en este periodo.";
+            aviso.style.cssText = "position:fixed; top:20px; left:50%; transform:translateX(-50%); background:#ff4c4c; color:white; padding:15px; border-radius:8px; z-index:9999; box-shadow: 0 4px 6px rgba(0,0,0,0.1);";
+            document.body.appendChild(aviso);
+            setTimeout(() => aviso.remove(), 3500);
             return null;
         }
         
