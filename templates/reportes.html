@@ -65,7 +65,8 @@
         const url = `/reportes/excel?tarjeta=${encodeURIComponent(tarjeta)}&fecha_inicio=${inicio}&fecha_fin=${fin}`;
         const res = await fetch(url);
         
-        if (!res.ok) {
+        const contentType = res.headers.get("content-type");
+        if (contentType && contentType.includes("text/html")) {
             const html = await res.text();
             document.open();
             document.write(html);
