@@ -125,14 +125,14 @@ async def generar_excel(request: Request, tarjeta: str = "TODAS", fecha_inicio: 
         res = query.execute()
         
         if not res.data: 
-            return HTMLResponse("<script>alert('No hay registros en esas fechas para esta tarjeta.'); window.location.href='/reportes';</script>")
+            return HTMLResponse("<script>alert('No hay registros en esas fechas para esta tarjeta.'); window.location.href='/reportes-v2';</script>")
         
         df = pd.DataFrame(res.data)
         df["fecha"] = pd.to_datetime(df["fecha"], errors='coerce')
         df = df.dropna(subset=["fecha"]).sort_values(by="fecha", ascending=True)
         
         if df.empty:
-            return HTMLResponse("<script>alert('No hay registros válidos.'); window.location.href='/reportes';</script>")
+            return HTMLResponse("<script>alert('No hay registros válidos.'); window.location.href='/reportes-v2';</script>")
         
         df["fecha_limpia"] = df["fecha"].dt.strftime('%Y-%m-%d')
         df_final = df[["fecha_limpia", "concepto", "monto", "tipo"]].copy()
@@ -169,8 +169,7 @@ async def generar_excel(request: Request, tarjeta: str = "TODAS", fecha_inicio: 
             }
         )
     except Exception as e:
-        return HTMLResponse(f"<script>alert('Error: {str(e)}'); window.location.href='/reportes';</script>")
-
+        return HTMLResponse(f"<script>alert('Error: {str(e)}'); window.location.href='/reportes-v2';</script>")
 
 @app.get("/admin/usuarios", response_class=HTMLResponse)
 async def panel_usuarios(request: Request):
@@ -218,7 +217,7 @@ async def f_nueva(request: Request):
     if not user: return RedirectResponse("/login")
     return templates.TemplateResponse("nueva_tarjeta.html", {"request": request, "user": user, "css": DARK_CSS})
 
-@app.post("/tarjetas/guardار")
+@app.post("/tarjetas/guardar")
 async def g_tarjeta(request: Request, nombre_tarjeta: str = Form(...), dia_corte: int = Form(...), dia_pago: int = Form(...)):
     user = request.session.get("user")
     if not user: return RedirectResponse("/login")
