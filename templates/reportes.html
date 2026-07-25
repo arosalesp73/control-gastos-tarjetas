@@ -87,15 +87,7 @@
         const fin = document.getElementById('fecha_fin').value;
 
         const texto = encodeURIComponent(`📊 Reporte de Gastos\nTarjeta: ${tarjeta}\nDesde: ${inicio}\nHasta: ${fin}`);
-        
-        // Usar el enlace web universal para evitar que falle el esquema en móviles
-        const waUrl = `https://api.whatsapp.com/send?text=${texto}`;
-        const a = document.createElement('a');
-        a.href = waUrl;
-        a.target = '_blank';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
+        window.open(`https://wa.me/?text=${texto}`, '_blank');
     }
 </script>
 </body>
