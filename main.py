@@ -276,3 +276,26 @@ async def g_mov(request: Request, tarjeta_nombre: str = Form(...), concepto: str
     }).execute()
     
     return RedirectResponse(f"/movimientos/nuevo/{tarjeta_nombre}?success=true", status_code=303)
+
+@app.get("/movimientos/editar/{id}", response_class=HTMLResponse)
+async def f_editar_mov(request: Request, id: int):
+    user = request.session.get("user")
+    if not user: return RedirectResponse("/login")
+    res = supabase.table("movimientos").select("*").eq("id", id).eq("usuario_id", user["id"]).execute()
+    return templates.TemplateResponse("editar_movimiento.html", {"request": request, "mov": res.data[0], "css": DARK_CSS})
+
+@app.post("/movimientos/actualizar")
+async def actualizar_mov(request: Request, id: int = Form(...), concepto: str = Form(...), monto: float = Form(...), tipo_movimiento: str = Form(...), fecha: str = Form(...), tarjeta: str = Form(...)):
+    user = request.session.get("user")
+    if not user: return RedirectResponse("/login")
+    
+    monto_f = monto * -1 if tipo_movimiento == 'abono' else monto
+    
+    supabase.table("movimientos").update({
+        "concepto": concepto, 
+        "monto": monto_f, 
+        "fecha": fecha, 
+        "tipo": tipo_movimiento
+    }).eq("id", id).eq("usuario_id", user["id"]).execute()
+    
+    return RedirectResponse(f"/movimientos/nuevo/{tarjeta}", status_code=303)
