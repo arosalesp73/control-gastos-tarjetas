@@ -101,7 +101,11 @@ async def logout(request: Request):
     return response
 
 @app.get("/reportes", response_class=HTMLResponse)
-async def rep_ui(request: Request):
+async def rep_ui(request: Request, response: Response):
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    
     user = request.session.get("user")
     if not user: return RedirectResponse("/login")
     res = supabase.table("tarjetas").select("nombre_tarjeta").eq("usuario_id", user["id"]).execute()
