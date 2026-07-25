@@ -13,7 +13,7 @@
         select, input, button { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #444; background: #0f0f1a; color: white; box-sizing: border-box; }
         button { background: #6c63ff; border: none; font-weight: bold; cursor: pointer; margin-top: 10px; }
         
-        /* Botón verde para WhatsApp definitivo */
+        /* Botón verde para WhatsApp */
         .btn-whatsapp { background: #25D366; color: black; margin-top: 10px; font-weight: bold; }
         
         .back-link { display: block; text-align: center; margin-top: 20px; color: #666; text-decoration: none; font-size: 0.85em; }
@@ -34,30 +34,30 @@
                     </select>
                 </div>
 
-            <div class="form-group">
-            <label>Desde:</label>
-            <input type="date" name="fecha_inicio" id="fecha_inicio" required style="color-scheme: dark;">
-        </div>
+                <div class="form-group">
+                    <label>Desde:</label>
+                    <input type="date" name="fecha_inicio" id="fecha_inicio" required style="color-scheme: dark;">
+                </div>
 
-            <div class="form-group">
-                <label>Hasta:</label>
-                <input type="date" name="fecha_fin" id="fecha_fin" required style="color-scheme: dark;">
-            </div>
+                <div class="form-group">
+                    <label>Hasta:</label>
+                    <input type="date" name="fecha_fin" id="fecha_fin" required style="color-scheme: dark;">
+                </div>
 
-            <button type="submit">Descargar Reporte</button>
-        </form>
+                <button type="submit">Descargar Reporte</button>
+                
+                <button type="button" class="btn-whatsapp" onclick="prepararEnvioDirecto()">🚀 Enviar Directo a WhatsApp</button>
+            </form>
             <a href="/" class="back-link">Volver al Inicio</a>
         </div>
     </div>
 
 <script>
-    // Pre-llenar fechas (primer día del mes actual y hoy)
     const hoy = new Date().toISOString().split('T')[0];
     const primero = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
     document.getElementsByName('fecha_inicio')[0].value = primero;
     document.getElementsByName('fecha_fin')[0].value = hoy;
 
-    // Función directa compatible con móviles para descargar
     function ejecutarAccion(ruta) {
         const formulario = document.getElementById('formReporte');
         formulario.action = ruta;
