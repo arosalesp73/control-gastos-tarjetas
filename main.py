@@ -100,7 +100,7 @@ async def logout(request: Request):
     response.delete_cookie("session")
     return response
 
-@app.get("/reportes-v2", response_class=HTMLResponse)
+@app.get("/reportes", response_class=HTMLResponse)
 async def rep_ui(request: Request, response: Response):
     response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
     response.headers["Pragma"] = "no-cache"
@@ -125,14 +125,14 @@ async def generar_excel(request: Request, tarjeta: str = "TODAS", fecha_inicio: 
         res = query.execute()
         
         if not res.data: 
-            return HTMLResponse("<script>alert('No hay registros en esas fechas para esta tarjeta.'); window.location.href='/reportes-v2';</script>")
+            return HTMLResponse("<script>alert('No hay registros en esas fechas para esta tarjeta.'); window.location.href='/reportes';</script>")
         
         df = pd.DataFrame(res.data)
         df["fecha"] = pd.to_datetime(df["fecha"], errors='coerce')
         df = df.dropna(subset=["fecha"]).sort_values(by="fecha", ascending=True)
         
         if df.empty:
-            return HTMLResponse("<script>alert('No hay registros válidos.'); window.location.href='/reportes-v2';</script>")
+            return HTMLResponse("<script>alert('No hay registros válidos.'); window.location.href='/reportes';</script>")
         
         df["fecha_limpia"] = df["fecha"].dt.strftime('%Y-%m-%d')
         df_final = df[["fecha_limpia", "concepto", "monto", "tipo"]].copy()
@@ -169,7 +169,7 @@ async def generar_excel(request: Request, tarjeta: str = "TODAS", fecha_inicio: 
             }
         )
     except Exception as e:
-        return HTMLResponse(f"<script>alert('Error: {str(e)}'); window.location.href='/reportes-v2';</script>")
+        return HTMLResponse(f"<script>alert('Error: {str(e)}'); window.location.href='/reportes';</script>")
 
 @app.get("/admin/usuarios", response_class=HTMLResponse)
 async def panel_usuarios(request: Request):
