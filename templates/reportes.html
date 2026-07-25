@@ -12,10 +12,6 @@
         label { display: block; margin-bottom: 5px; color: #aaa; font-size: 0.85em; }
         select, input, button { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #444; background: #0f0f1a; color: white; box-sizing: border-box; }
         button { background: #6c63ff; border: none; font-weight: bold; cursor: pointer; margin-top: 10px; }
-        
-        /* Botón verde para WhatsApp */
-        .btn-whatsapp { background: #25D366; color: black; margin-top: 10px; font-weight: bold; }
-        
         .back-link { display: block; text-align: center; margin-top: 20px; color: #666; text-decoration: none; font-size: 0.85em; }
     </style>
 </head>
@@ -45,8 +41,8 @@
                 </div>
 
                 <button type="submit">Descargar Reporte</button>
-                <button type="button" class="btn-whatsapp" onclick="enviarWhatsApp()">🚀 Enviar Directo a WhatsApp</button>
             </form>
+            <a href="/" class="back-link">Volver al inicio</a>
         </div>
     </div>
 
@@ -79,21 +75,6 @@
             document.write(html);
             document.close();
         }
-    }
-
-    function enviarWhatsApp() {
-        const tarjeta = document.getElementById('tarjeta').value;
-        const inicio = document.getElementById('fecha_inicio').value;
-        const fin = document.getElementById('fecha_fin').value;
-
-        const texto = encodeURIComponent(`📊 Reporte de Gastos\nTarjeta: ${tarjeta}\nDesde: ${inicio}\nHasta: ${fin}`);
-        
-        const link = document.createElement('a');
-        link.href = `https://wa.me/?text=${texto}`;
-        link.target = '_blank';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
     }
 </script>
 </body>
