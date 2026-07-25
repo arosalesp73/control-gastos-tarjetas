@@ -67,10 +67,7 @@
         
         const contentType = res.headers.get("content-type");
         if (contentType && contentType.includes("text/html")) {
-            const html = await res.text();
-            document.open();
-            document.write(html);
-            document.close();
+            alert("No hay registros en este periodo.");
             return null;
         }
         return res;
