@@ -23,7 +23,7 @@
     <div class="container">
         <div class="card">
             <h2>📊 Exportar Excel</h2>
-            <form id="formReporte" onsubmit="descargarReporte(event)">
+            <form id="formReporte">
                 <div class="form-group">
                     <label>Seleccionar Tarjeta:</label>
                     <select name="tarjeta" id="tarjeta">
@@ -44,7 +44,7 @@
                     <input type="date" name="fecha_fin" id="fecha_fin" required style="color-scheme: dark;">
                 </div>
 
-                <button type="submit">Descargar Reporte</button>
+                <button type="button" onclick="descargarReporte()">Descargar Reporte</button>
                 <button type="button" class="btn-whatsapp" onclick="enviarWhatsApp()">🚀 Enviar Directo a WhatsApp</button>
             </form>
             <a href="/" class="back-link">Volver al inicio</a>
@@ -57,41 +57,45 @@
     document.getElementById('fecha_inicio').value = primero;
     document.getElementById('fecha_fin').value = hoy;
 
-    async function descargarReporte(e) {
-        e.preventDefault();
+    async function verificarDatos() {
         const tarjeta = document.getElementById('tarjeta').value;
         const inicio = document.getElementById('fecha_inicio').value;
         const fin = document.getElementById('fecha_fin').value;
 
         const url = `/reportes/excel?tarjeta=${encodeURIComponent(tarjeta)}&fecha_inicio=${inicio}&fecha_fin=${fin}`;
-        
         const res = await fetch(url);
-        if (res.ok) {
-            const contentType = res.headers.get("content-type");
-            if (contentType && contentType.includes("application/json")) {
-                const data = await res.json();
-                alert(data.detail || "No hay registros.");
-            } else {
-                const blob = await res.blob();
-                const link = document.createElement('a');
-                link.href = window.URL.createObjectURL(blob);
-                link.download = `Reporte_${tarjeta}.xlsx`;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-            }
-        } else {
+        
+        if (!res.ok) {
             const html = await res.text();
             document.open();
             document.write(html);
             document.close();
+            return null;
         }
+        return res;
     }
 
-    function enviarWhatsApp() {
+    async function descargarReporte() {
+        const tarjeta = document.getElementById('tarjeta').value;
+        const res = await verificarDatos();
+        if (!res) return;
+
+        const blob = await res.blob();
+        const link = document.createElement('a');
+        link.href = window.URL.createObjectURL(blob);
+        link.download = `Reporte_${tarjeta}.xlsx`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    async function enviarWhatsApp() {
         const tarjeta = document.getElementById('tarjeta').value;
         const inicio = document.getElementById('fecha_inicio').value;
         const fin = document.getElementById('fecha_fin').value;
+
+        const res = await verificarDatos();
+        if (!res) return;
 
         const texto = encodeURIComponent(`📊 Reporte de Gastos\nTarjeta: ${tarjeta}\nDesde: ${inicio}\nHasta: ${fin}`);
         
