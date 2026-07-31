@@ -117,13 +117,14 @@
             <div class="botones-accion">
                 <a href="/tarjetas/editar/{{ tarjeta.nombre_tarjeta }}" 
                    style="color: #6c63ff; text-decoration: none; font-size: 0.8em; background: rgba(108,99,255,0.1); padding: 5px 10px; border-radius: 5px; border: 1px solid #6c63ff;">
-                   ✏️
+                    ✏️
                 </a>
-                <a href="/tarjetas/eliminar/{{ tarjeta.nombre_tarjeta }}" 
-                   onclick="return confirm('¿Seguro que deseas eliminar esta tarjeta y sus movimientos?');"
-                   style="color: #ff4e4e; text-decoration: none; font-size: 0.8em; background: rgba(255,0,0,0.1); padding: 5px 10px; border-radius: 5px; border: 1px solid #ff4e4e;">
-                   🗑️
-                </a>
+                <form id="form-eliminar-tarjeta-{{ loop.index }}" action="/tarjetas/eliminar/{{ tarjeta.nombre_tarjeta }}" method="post" style="margin: 0; display: inline;">
+                    <button type="button" onclick="confirmarEliminacionTarjeta('form-eliminar-tarjeta-{{ loop.index }}', '¿Seguro que deseas eliminar esta tarjeta y sus movimientos?')" 
+                            style="color: #ff4e4e; text-decoration: none; font-size: 0.8em; background: rgba(255,0,0,0.1); padding: 5px 10px; border-radius: 5px; border: 1px solid #ff4e4e; cursor: pointer;">
+                        🗑️
+                    </button>
+                </form>
             </div>
 
             <a href="/movimientos/nuevo/{{ tarjeta.nombre_tarjeta }}" style="text-decoration: none; color: inherit;">
@@ -143,6 +144,12 @@
         function toggleMenu() {
             const menu = document.getElementById('navMenu');
             menu.classList.toggle('active');
+        }
+
+        function confirmarEliminacionTarjeta(formId, mensaje) {
+            if (window.confirm(mensaje)) {
+                document.getElementById(formId).submit();
+            }
         }
     </script>
 
