@@ -232,13 +232,16 @@ async def actualizar_usuario(request: Request, id: int = Form(...), username: st
 @app.post("/admin/usuarios/eliminar/{id}")
 async def e_usuario(request: Request, id: int):
     user = request.session.get("user")
-    if not user or user.get("role") != 'admin': return RedirectResponse("/")
+    if not user or user.get("role") != 'admin': return RedirectResponse("/", status_code=303)
+    
     supabase.table("movimientos").delete().eq("usuario_id", id).execute()
     supabase.table("tarjetas").delete().eq("usuario_id", id).execute()
     supabase.table("usuarios").delete().eq("id", id).execute()
+    
     if id == user["id"]:
         request.session.clear()
-        return RedirectResponse("/login")
+        return RedirectResponse("/login", status_code=303)
+        
     return RedirectResponse("/admin/usuarios", status_code=303)
 
 @app.get("/tarjetas/nueva", response_class=HTMLResponse)
