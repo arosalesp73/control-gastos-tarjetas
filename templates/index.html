@@ -76,7 +76,6 @@
         }
         .card-tarjeta:hover { border-color: var(--accent); }
 
-        /* Barra inferior dentro de la tarjeta para separar los botones del enlace principal */
         .card-footer {
             display: flex;
             justify-content: space-between;
@@ -95,6 +94,7 @@
             text-decoration: none;
             font-size: 0.9em;
             cursor: pointer;
+            display: inline-block;
         }
         .btn-accion-movil:active { background: var(--accent); }
         
@@ -138,24 +138,21 @@
     <div class="grid-container">
         {% for tarjeta in tarjetas %}
         <div class="card-tarjeta">
-            <!-- Parte superior: Enlace para ir a registrar movimientos -->
             <a href="/movimientos/nuevo/{{ tarjeta.nombre_tarjeta }}" style="text-decoration: none; color: inherit;">
                 <h3 style="margin: 0 0 10px 0; color: var(--accent);">💳 {{ tarjeta.nombre_tarjeta }}</h3>
                 <p style="margin: 5px 0; font-size: 0.9em; color: #bbb;">📅 Corte: los {{ tarjeta.dia_corte }}</p>
                 <p style="margin: 5px 0; font-size: 0.9em; color: #bbb;">🔔 Pago: los {{ tarjeta.dia_pago }}</p>
             </a>
 
-            <!-- Parte inferior: Botones separados fuera del enlace para evitar bloqueos en el celular -->
             <div class="card-footer">
                 <a href="/tarjetas/editar/{{ tarjeta.nombre_tarjeta }}" class="btn-accion-movil" style="border-color: #6c63ff; color: #6c63ff;">
                     ✏️ Editar
                 </a>
                 
-                <form action="/tarjetas/eliminar/{{ tarjeta.nombre_tarjeta }}" method="post" onsubmit="return confirm('¿Seguro que deseas eliminar esta tarjeta y sus movimientos?');" style="margin: 0;">
-                    <button type="submit" class="btn-accion-movil" style="border-color: #ff4e4e; color: #ff4e4e; background: rgba(255,0,0,0.05);">
-                        🗑️ Eliminar
-                    </button>
-                </form>
+                <!-- Ahora redirige de forma limpia a una vista de advertencia -->
+                <a href="/tarjetas/confirmar-eliminar/{{ tarjeta.nombre_tarjeta }}" class="btn-accion-movil" style="border-color: #ff4e4e; color: #ff4e4e; background: rgba(255,0,0,0.05);">
+                    🗑️ Eliminar
+                </a>
             </div>
         </div>
         {% endfor %}
