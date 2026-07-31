@@ -36,7 +36,6 @@ def generar_hash(password: str) -> str:
 
 def verificar_password(password: str, stored_hash: str) -> bool:
     try:
-        # Si por alguna razón quedó un hash antiguo o texto plano
         if "$" not in stored_hash:
             return password == stored_hash
         salt, pwd_hash = stored_hash.split('$')
@@ -271,7 +270,16 @@ async def actualizar_tarjeta(request: Request, nombre_tarjeta: str = Form(...), 
     supabase.table("tarjetas").update({"nombre_tarjeta": nombre_tarjeta, "dia_corte": dia_corte, "dia_pago": dia_pago}).eq("id", id).eq("usuario_id", user["id"]).execute()
     return RedirectResponse("/", status_code=303)
 
-@app.get("/tarjetas/eliminar/{nombre}")
+@app.get("/tarjetas/confirmar-eliminar/{nombre}", response_class=HTMLResponse)
+async def confirmar_eliminar_tarjeta(request: Request, nombre: str):
+    user = request.session.get("user")
+    if not user: return RedirectResponse("/login")
+    res = supabase.table("tarjetas").select("*").eq("nombre_tarjeta", nombre).eq("usuario_id", user["id"]).execute()
+    if not res.data:
+        return RedirectResponse("/")
+    return templates.TemplateResponse("confirmar_eliminar_tarjeta.html", {"request": request, "tarjeta": res.data[0], "css": DARK_CSS})
+
+@app.post("/tarjetas/eliminar/{nombre}")
 async def e_tarjeta(request: Request, nombre: str):
     user = request.session.get("user")
     if not user: return RedirectResponse("/login")
