@@ -229,7 +229,7 @@ async def actualizar_usuario(request: Request, id: int = Form(...), username: st
     supabase.table("usuarios").update({"username": username, "password": password_hash, "role": role}).eq("id", id).execute()
     return RedirectResponse("/admin/usuarios", status_code=303)
 
-@app.get("/admin/usuarios/eliminar/{id}")
+@app.post("/admin/usuarios/eliminar/{id}")
 async def e_usuario(request: Request, id: int):
     user = request.session.get("user")
     if not user or user.get("role") != 'admin': return RedirectResponse("/")
