@@ -30,6 +30,12 @@ app.add_middleware(
 # --- CONFIGURACIÓN DE SESIONES ---
 app.add_middleware(SessionMiddleware, secret_key=os.environ.get("SESSION_SECRET", "12345"))
 
+@app.get("/arreglar-pass")
+async def arreglar_pass():
+    password_hash = pwd_context.hash("admin")
+    supabase.table("usuarios").update({"password": password_hash}).eq("username", "alfredo").execute()
+    return HTMLResponse("<h1>Contraseña actualizada correctamente. <a href='/login'>Ir al Login</a></h1>")
+
 # --- MIDDLEWARE ANTI-CACHE ---
 @app.middleware("http")
 async def add_no_cache_headers(request: Request, call_next):
