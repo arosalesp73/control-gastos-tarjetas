@@ -37,7 +37,7 @@
         @media (max-width: 768px) {
             .menu-toggle { display: block; }
             .nav-menu { 
-                display: none; /* Se oculta por defecto en móvil */
+                display: none; 
                 flex-direction: column; 
                 position: absolute; 
                 top: 100%; 
@@ -48,7 +48,7 @@
                 border-bottom: 1px solid #333;
                 box-shadow: 0 10px 20px rgba(0,0,0,0.5);
             }
-            .nav-menu.active { display: flex; } /* Clase que activaremos con JS */
+            .nav-menu.active { display: flex; }
             .nav-link { width: 100%; text-align: center; padding: 15px 0; font-size: 1.1em; border-bottom: 1px solid rgba(255,255,255,0.05); }
             .user-info { width: 100%; text-align: center; padding-top: 10px; flex-direction: column; gap: 10px; }
         }
@@ -61,18 +61,42 @@
             padding: 20px;
             margin-bottom: 40px; 
         }
-        .card-wrapper { position: relative; }
+        
         .card-tarjeta { 
             background: var(--surface); 
-            padding: 25px; 
+            padding: 20px; 
             border-radius: 15px; 
             border: 1px solid #333; 
-            height: 100%; 
             box-sizing: border-box; 
             transition: transform 0.2s, border-color 0.2s;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            height: 100%;
         }
-        .card-tarjeta:hover { transform: translateY(-5px); border-color: var(--accent); }
-        .botones-accion { position: absolute; top: 15px; right: 15px; z-index: 10; display: flex; gap: 8px; }
+        .card-tarjeta:hover { border-color: var(--accent); }
+
+        /* Barra inferior dentro de la tarjeta para separar los botones del enlace principal */
+        .card-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .btn-accion-movil {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid #444;
+            color: #fff;
+            padding: 8px 12px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-size: 0.9em;
+            cursor: pointer;
+        }
+        .btn-accion-movil:active { background: var(--accent); }
         
         .btn-plus { 
             display: flex; align-items: center; justify-content: center; 
@@ -113,27 +137,26 @@
     
     <div class="grid-container">
         {% for tarjeta in tarjetas %}
-        <div class="card-wrapper">
-            <div class="botones-accion">
-                <a href="/tarjetas/editar/{{ tarjeta.nombre_tarjeta }}" 
-                   style="color: #6c63ff; text-decoration: none; font-size: 0.8em; background: rgba(108,99,255,0.1); padding: 5px 10px; border-radius: 5px; border: 1px solid #6c63ff;">
-                    ✏️
+        <div class="card-tarjeta">
+            <!-- Parte superior: Enlace para ir a registrar movimientos -->
+            <a href="/movimientos/nuevo/{{ tarjeta.nombre_tarjeta }}" style="text-decoration: none; color: inherit;">
+                <h3 style="margin: 0 0 10px 0; color: var(--accent);">💳 {{ tarjeta.nombre_tarjeta }}</h3>
+                <p style="margin: 5px 0; font-size: 0.9em; color: #bbb;">📅 Corte: los {{ tarjeta.dia_corte }}</p>
+                <p style="margin: 5px 0; font-size: 0.9em; color: #bbb;">🔔 Pago: los {{ tarjeta.dia_pago }}</p>
+            </a>
+
+            <!-- Parte inferior: Botones separados fuera del enlace para evitar bloqueos en el celular -->
+            <div class="card-footer">
+                <a href="/tarjetas/editar/{{ tarjeta.nombre_tarjeta }}" class="btn-accion-movil" style="border-color: #6c63ff; color: #6c63ff;">
+                    ✏️ Editar
                 </a>
-                <form id="form-eliminar-tarjeta-{{ loop.index }}" action="/tarjetas/eliminar/{{ tarjeta.nombre_tarjeta }}" method="post" style="margin: 0; display: inline;">
-                    <button type="button" onclick="confirmarEliminacionTarjeta('form-eliminar-tarjeta-{{ loop.index }}', '¿Seguro que deseas eliminar esta tarjeta y sus movimientos?')" 
-                            style="color: #ff4e4e; text-decoration: none; font-size: 0.8em; background: rgba(255,0,0,0.1); padding: 5px 10px; border-radius: 5px; border: 1px solid #ff4e4e; cursor: pointer;">
-                        🗑️
+                
+                <form action="/tarjetas/eliminar/{{ tarjeta.nombre_tarjeta }}" method="post" onsubmit="return confirm('¿Seguro que deseas eliminar esta tarjeta y sus movimientos?');" style="margin: 0;">
+                    <button type="submit" class="btn-accion-movil" style="border-color: #ff4e4e; color: #ff4e4e; background: rgba(255,0,0,0.05);">
+                        🗑️ Eliminar
                     </button>
                 </form>
             </div>
-
-            <a href="/movimientos/nuevo/{{ tarjeta.nombre_tarjeta }}" style="text-decoration: none; color: inherit;">
-                <div class="card-tarjeta">
-                    <h3 style="margin: 0 0 10px 0; color: var(--accent);">💳 {{ tarjeta.nombre_tarjeta }}</h3>
-                    <p style="margin: 5px 0; font-size: 0.9em; color: #bbb;">📅 Corte: los {{ tarjeta.dia_corte }}</p>
-                    <p style="margin: 5px 0; font-size: 0.9em; color: #bbb;">🔔 Pago: los {{ tarjeta.dia_pago }}</p>
-                </div>
-            </a>
         </div>
         {% endfor %}
 
@@ -144,12 +167,6 @@
         function toggleMenu() {
             const menu = document.getElementById('navMenu');
             menu.classList.toggle('active');
-        }
-
-        function confirmarEliminacionTarjeta(formId, mensaje) {
-            if (window.confirm(mensaje)) {
-                document.getElementById(formId).submit();
-            }
         }
     </script>
 
