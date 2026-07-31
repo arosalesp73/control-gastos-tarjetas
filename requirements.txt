@@ -9,3 +9,4 @@ pandas
 openpyxl
 apscheduler
 httpx
+passlib[bcrypt]
