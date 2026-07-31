@@ -12,6 +12,10 @@ from fastapi.responses import HTMLResponse, StreamingResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
 from supabase import create_client, Client
+from passlib.context import CryptContext
+
+# Configuración del encriptador de contraseñas
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 app = FastAPI()
 
@@ -64,9 +68,10 @@ button { width: 100%; padding: 10px; background: var(--accent); border: none; co
 async def instalar_admin():
     check = supabase.table("usuarios").select("id").execute()
     if len(check.data) == 0:
+        password_hash = pwd_context.hash("admin")
         supabase.table("usuarios").insert({
             "username": "alfredo", 
-            "password": "admin", 
+            "password": password_hash, 
             "role": "admin"
         }).execute()
         return HTMLResponse("<h1>Admin creado. <a href='/login'>Ir al Login</a></h1>")
@@ -86,11 +91,13 @@ async def login_ui(request: Request, error: str = None):
 
 @app.post("/login")
 async def login(request: Request, username: str = Form(...), password: str = Form(...)):
-    res = supabase.table("usuarios").select("*").eq("username", username).eq("password", password).execute()
+    res = supabase.table("usuarios").select("*").eq("username", username).execute()
     if res.data:
-        request.session.clear()
-        request.session["user"] = res.data[0]
-        return RedirectResponse("/", status_code=303)
+        usuario = res.data[0]
+        if pwd_context.verify(password, usuario["password"]):
+            request.session.clear()
+            request.session["user"] = usuario
+            return RedirectResponse("/", status_code=303)
     return RedirectResponse("/login?error=Usuario+o+contraseña+incorrectos", status_code=303)
 
 @app.get("/logout")
@@ -182,7 +189,8 @@ async def panel_usuarios(request: Request):
 async def c_usuario(request: Request, nuevo_username: str = Form(...), nuevo_password: str = Form(...), nuevo_role: str = Form(...)):
     user = request.session.get("user")
     if not user or user.get("role") != 'admin': return RedirectResponse("/")
-    supabase.table("usuarios").insert({"username": nuevo_username, "password": nuevo_password, "role": nuevo_role}).execute()
+    password_hash = pwd_context.hash(nuevo_password)
+    supabase.table("usuarios").insert({"username": nuevo_username, "password": password_hash, "role": nuevo_role}).execute()
     return RedirectResponse("/admin/usuarios", status_code=303)
 
 @app.get("/admin/usuarios/editar/{id}", response_class=HTMLResponse)
@@ -196,7 +204,8 @@ async def f_edit_user(request: Request, id: int):
 async def actualizar_usuario(request: Request, id: int = Form(...), username: str = Form(...), password: str = Form(...), role: str = Form(...)):
     user = request.session.get("user")
     if not user or user.get("role") != 'admin': return RedirectResponse("/")
-    supabase.table("usuarios").update({"username": username, "password": password, "role": role}).eq("id", id).execute()
+    password_hash = pwd_context.hash(password)
+    supabase.table("usuarios").update({"username": username, "password": password_hash, "role": role}).eq("id", id).execute()
     return RedirectResponse("/admin/usuarios", status_code=303)
 
 @app.get("/admin/usuarios/eliminar/{id}")
