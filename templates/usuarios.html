@@ -33,11 +33,11 @@
                     <strong style="font-size: 1.1em;">{{ u.username }}</strong><br>
                     <span style="color: #888; font-size: 0.8em;">Rol: {{ u.role }}</span>
                 </div>
-                <div style="display: flex; gap: 10px;">
+                <div style="display: flex; gap: 10px; align-items: center;">
                     <a href="/admin/usuarios/editar/{{ u.id }}" style="text-decoration: none;">✏️</a>
-                    <a href="/admin/usuarios/eliminar/{{ u.id }}" 
-                       onclick="return confirm('¿Estás seguro? Se borrarán también todas sus tarjetas y movimientos.')"
-                       style="text-decoration: none;">🗑️</a>
+                    <form action="/admin/usuarios/eliminar/{{ u.id }}" method="post" onsubmit="return confirm('¿Estás seguro? Se borrarán también todas sus tarjetas y movimientos.');" style="margin: 0; display: inline;">
+                        <button type="submit" style="background: none; border: none; cursor: pointer; font-size: 1.2em; padding: 0;">🗑️</button>
+                    </form>
                 </div>
             </div>
             {% endfor %}
