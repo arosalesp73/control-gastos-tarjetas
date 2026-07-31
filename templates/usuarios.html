@@ -35,13 +35,21 @@
                 </div>
                 <div style="display: flex; gap: 10px; align-items: center;">
                     <a href="/admin/usuarios/editar/{{ u.id }}" style="text-decoration: none;">✏️</a>
-                    <form action="/admin/usuarios/eliminar/{{ u.id }}" method="post" onsubmit="return confirm('¿Estás seguro? Se borrarán también todas sus tarjetas y movimientos.');" style="margin: 0; display: inline;">
-                        <button type="submit" style="background: none; border: none; cursor: pointer; font-size: 1.2em; padding: 0;">🗑️</button>
+                    <form id="form-eliminar-{{ u.id }}" action="/admin/usuarios/eliminar/{{ u.id }}" method="post" style="margin: 0; display: inline;">
+                        <button type="button" onclick="confirmarEliminacion('{{ u.id }}', '¿Estás seguro? Se borrarán también todas sus tarjetas y movimientos.')" style="background: none; border: none; cursor: pointer; font-size: 1.2em; padding: 0;">🗑️</button>
                     </form>
                 </div>
             </div>
             {% endfor %}
         </div>
     </div>
+
+    <script>
+    function confirmarEliminacion(id, mensaje) {
+        if (window.confirm(mensaje)) {
+            document.getElementById('form-eliminar-' + id).submit();
+        }
+    }
+    </script>
 </body>
 </html>
