@@ -5,6 +5,8 @@ import httpx
 import threading
 import time
 import urllib.parse
+import hashlib
+import secrets
 from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime
 from fastapi import FastAPI, Form, Request, HTTPException, Response
@@ -12,10 +14,6 @@ from fastapi.responses import HTMLResponse, StreamingResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
 from supabase import create_client, Client
-from passlib.context import CryptContext
-
-# Configuración del encriptador de contraseñas
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 app = FastAPI()
 
@@ -30,9 +28,26 @@ app.add_middleware(
 # --- CONFIGURACIÓN DE SESIONES ---
 app.add_middleware(SessionMiddleware, secret_key=os.environ.get("SESSION_SECRET", "12345"))
 
+# --- FUNCIONES DE CONTRASEÑA SEGURA (COMPATIBLES) ---
+def generar_hash(password: str) -> str:
+    salt = secrets.token_hex(16)
+    pwd_hash = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt.encode('utf-8'), 100000).hex()
+    return f"{salt}${pwd_hash}"
+
+def verificar_password(password: str, stored_hash: str) -> bool:
+    try:
+        # Si por alguna razón quedó un hash antiguo o texto plano
+        if "$" not in stored_hash:
+            return password == stored_hash
+        salt, pwd_hash = stored_hash.split('$')
+        verificar = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt.encode('utf-8'), 100000).hex()
+        return verificar == pwd_hash
+    except:
+        return False
+
 @app.get("/arreglar-pass")
 async def arreglar_pass():
-    password_hash = pwd_context.hash("admin")
+    password_hash = generar_hash("admin")
     supabase.table("usuarios").update({"password": password_hash}).eq("username", "alfredo").execute()
     return HTMLResponse("<h1>Contraseña actualizada correctamente. <a href='/login'>Ir al Login</a></h1>")
 
@@ -74,7 +89,7 @@ button { width: 100%; padding: 10px; background: var(--accent); border: none; co
 async def instalar_admin():
     check = supabase.table("usuarios").select("id").execute()
     if len(check.data) == 0:
-        password_hash = pwd_context.hash("admin")
+        password_hash = generar_hash("admin")
         supabase.table("usuarios").insert({
             "username": "alfredo", 
             "password": password_hash, 
@@ -100,7 +115,7 @@ async def login(request: Request, username: str = Form(...), password: str = For
     res = supabase.table("usuarios").select("*").eq("username", username).execute()
     if res.data:
         usuario = res.data[0]
-        if pwd_context.verify(password, usuario["password"]):
+        if verificar_password(password, usuario["password"]):
             request.session.clear()
             request.session["user"] = usuario
             return RedirectResponse("/", status_code=303)
@@ -195,7 +210,7 @@ async def panel_usuarios(request: Request):
 async def c_usuario(request: Request, nuevo_username: str = Form(...), nuevo_password: str = Form(...), nuevo_role: str = Form(...)):
     user = request.session.get("user")
     if not user or user.get("role") != 'admin': return RedirectResponse("/")
-    password_hash = pwd_context.hash(nuevo_password)
+    password_hash = generar_hash(nuevo_password)
     supabase.table("usuarios").insert({"username": nuevo_username, "password": password_hash, "role": nuevo_role}).execute()
     return RedirectResponse("/admin/usuarios", status_code=303)
 
@@ -210,7 +225,7 @@ async def f_edit_user(request: Request, id: int):
 async def actualizar_usuario(request: Request, id: int = Form(...), username: str = Form(...), password: str = Form(...), role: str = Form(...)):
     user = request.session.get("user")
     if not user or user.get("role") != 'admin': return RedirectResponse("/")
-    password_hash = pwd_context.hash(password)
+    password_hash = generar_hash(password)
     supabase.table("usuarios").update({"username": username, "password": password_hash, "role": role}).eq("id", id).execute()
     return RedirectResponse("/admin/usuarios", status_code=303)
 
