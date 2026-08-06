@@ -274,10 +274,34 @@ async def actualizar_tarjeta(request: Request, nombre_tarjeta: str = Form(...), 
 async def confirmar_eliminar_tarjeta(request: Request, nombre: str):
     user = request.session.get("user")
     if not user: return RedirectResponse("/login")
+    
+    # Verificamos que la tarjeta exista y pertenezca al usuario
     res = supabase.table("tarjetas").select("*").eq("nombre_tarjeta", nombre).eq("usuario_id", user["id"]).execute()
     if not res.data:
         return RedirectResponse("/")
-    return templates.TemplateResponse("confirmar_eliminar_tarjeta.html", {"request": request, "tarjeta": res.data[0], "css": DARK_CSS})
+        
+    # Renderizamos una vista de confirmación segura directamente desde el servidor
+    html_content = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Confirmar Eliminación</title>
+        <style>{DARK_CSS}</style>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body style="display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0;">
+        <div class="card" style="max-width: 400px; width: 90%; text-align: center;">
+            <h2>¿Eliminar tarjeta?</h2>
+            <p>Estás a punto de borrar la tarjeta <b>{nombre}</b> y todos sus movimientos asociados. Esta acción no se puede deshacer.</p>
+            <form action="/tarjetas/eliminar/{urllib.parse.quote(nombre)}" method="POST" style="margin-top: 20px;">
+                <button type="submit" style="background-color: #ff5555; margin-bottom: 10px;">Sí, eliminar</button>
+                <a href="/" style="display: block; padding: 10px; background: #444; color: white; text-decoration: none; border-radius: 5px;">Cancelar</a>
+            </form>
+        </div>
+    </body>
+    </html>
+    """
+    return HTMLResponse(content=html_content)
 
 @app.post("/tarjetas/eliminar/{nombre}")
 async def e_tarjeta(request: Request, nombre: str):
