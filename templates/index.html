@@ -149,10 +149,9 @@
                     ✏️ Editar
                 </a>
                 
-                <!-- Ahora redirige de forma limpia a una vista de advertencia -->
-                <a href="/tarjetas/confirmar-eliminar/{{ tarjeta.nombre_tarjeta }}" class="btn-accion-movil" style="border-color: #ff4e4e; color: #ff4e4e; background: rgba(255,0,0,0.05);">
+                <button type="button" onclick="abrirModalEliminar('{{ tarjeta.nombre_tarjeta }}')" class="btn-accion-movil" style="border-color: #ff4e4e; color: #ff4e4e; background: rgba(255,0,0,0.05);">
                     🗑️ Eliminar
-                </a>
+                </button>
             </div>
         </div>
         {% endfor %}
@@ -160,10 +159,27 @@
         <a href="/tarjetas/nueva" class="btn-plus"><span>+</span></a>
     </div>
 
+    <dialog id="modalEliminar" style="background: var(--surface); color: var(--text); border: 1px solid #333; border-radius: 12px; padding: 20px; max-width: 400px; width: 90%;">
+        <div style="text-align: center;">
+            <h2>¿Eliminar tarjeta?</h2>
+            <p>Se borrará la tarjeta <b id="nombreTarjetaModal"></b> y todos sus movimientos.</p>
+            <form id="formEliminar" method="POST">
+                <button type="submit" style="background-color: #ff5555; margin-bottom: 10px; width: 100%; padding: 10px; border-radius: 8px; border: none; color: white; cursor: pointer;">Sí, eliminar</button>
+                <button type="button" onclick="document.getElementById('modalEliminar').close()" style="background: #444; width: 100%; padding: 10px; border-radius: 8px; border: none; color: white; cursor: pointer;">Cancelar</button>
+            </form>
+        </div>
+    </dialog>
+
     <script>
         function toggleMenu() {
             const menu = document.getElementById('navMenu');
             menu.classList.toggle('active');
+        }
+
+        function abrirModalEliminar(nombre) {
+            document.getElementById('nombreTarjetaModal').innerText = nombre;
+            document.getElementById('formEliminar').action = '/tarjetas/eliminar/' + encodeURIComponent(nombre);
+            document.getElementById('modalEliminar').showModal();
         }
     </script>
 
