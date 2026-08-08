@@ -163,9 +163,13 @@
         <div style="text-align: center;">
             <h3 style="margin-top: 0;">¿Eliminar tarjeta?</h3>
             <p style="font-size: 0.9em; color: #bbb;">Se borrará la tarjeta <b id="nombreTarjetaModal"></b> y todos sus movimientos.</p>
-            <form id="formEliminar" method="POST" style="margin-top: 20px; text-align: center;">
-                <button type="submit" style="background-color: #ff5555 !important; border: 1px solid #ff5555 !important; color: white !important; padding: 6px 14px !important; border-radius: 8px !important; cursor: pointer !important; font-size: 0.9em !important; width: auto !important; display: inline-block !important; margin-right: 8px !important;">Sí, eliminar</button>
-                <button type="button" onclick="document.getElementById('modalEliminar').close()" style="background: #444 !important; border: 1px solid #555 !important; color: white !important; padding: 6px 14px !important; border-radius: 8px !important; cursor: pointer !important; font-size: 0.9em !important; width: auto !important; display: inline-block !important;">Cancelar</button>
+            <form id="formEliminar" method="POST" style="margin-top: 20px;">
+                <div style="display: inline-block; margin-right: 10px;">
+                    <button type="submit" style="background-color: #ff5555; border: 1px solid #ff5555; color: white; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 0.9em;">Sí, eliminar</button>
+                </div>
+                <div style="display: inline-block;">
+                    <button type="button" onclick="document.getElementById('modalEliminar').close()" style="background: #444; border: 1px solid #555; color: white; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 0.9em;">Cancelar</button>
+                </div>
             </form>
         </div>
     </dialog>
