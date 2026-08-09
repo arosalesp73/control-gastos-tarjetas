@@ -201,14 +201,18 @@ async def generar_excel(request: Request, tarjeta: str = "TODAS", fecha_inicio: 
 @app.get("/admin/usuarios", response_class=HTMLResponse)
 async def panel_usuarios(request: Request):
     user = request.session.get("user")
-    if not user or user.get("role") != 'admin': return RedirectResponse("/")
+    if not user: return RedirectResponse("/login")
+    if user.get("role") != 'admin':
+        raise HTTPException(status_code=403, detail="Acceso denegado: Se requieren privilegios de administrador.")
     res = supabase.table("usuarios").select("*").execute()
     return templates.TemplateResponse("usuarios.html", {"request": request, "user": user, "lista_usuarios": res.data, "css": DARK_CSS})
 
 @app.post("/admin/crear_usuario")
 async def c_usuario(request: Request, nuevo_username: str = Form(...), nuevo_password: str = Form(...), nuevo_role: str = Form(...)):
     user = request.session.get("user")
-    if not user or user.get("role") != 'admin': return RedirectResponse("/")
+    if not user: return RedirectResponse("/login")
+    if user.get("role") != 'admin':
+        raise HTTPException(status_code=403, detail="Acceso denegado.")
     password_hash = generar_hash(nuevo_password)
     supabase.table("usuarios").insert({"username": nuevo_username, "password": password_hash, "role": nuevo_role}).execute()
     return RedirectResponse("/admin/usuarios", status_code=303)
@@ -216,14 +220,18 @@ async def c_usuario(request: Request, nuevo_username: str = Form(...), nuevo_pas
 @app.get("/admin/usuarios/editar/{id}", response_class=HTMLResponse)
 async def f_edit_user(request: Request, id: int):
     user = request.session.get("user")
-    if not user or user.get("role") != 'admin': return RedirectResponse("/")
+    if not user: return RedirectResponse("/login")
+    if user.get("role") != 'admin':
+        raise HTTPException(status_code=403, detail="Acceso denegado.")
     res = supabase.table("usuarios").select("*").eq("id", id).execute()
     return templates.TemplateResponse("editar_usuario.html", {"request": request, "u_edit": res.data[0], "css": DARK_CSS})
 
 @app.post("/admin/usuarios/actualizar")
 async def actualizar_usuario(request: Request, id: int = Form(...), username: str = Form(...), password: str = Form(...), role: str = Form(...)):
     user = request.session.get("user")
-    if not user or user.get("role") != 'admin': return RedirectResponse("/")
+    if not user: return RedirectResponse("/login")
+    if user.get("role") != 'admin':
+        raise HTTPException(status_code=403, detail="Acceso denegado.")
     password_hash = generar_hash(password)
     supabase.table("usuarios").update({"username": username, "password": password_hash, "role": role}).eq("id", id).execute()
     return RedirectResponse("/admin/usuarios", status_code=303)
@@ -231,7 +239,9 @@ async def actualizar_usuario(request: Request, id: int = Form(...), username: st
 @app.post("/admin/usuarios/eliminar/{id}")
 async def e_usuario(request: Request, id: int):
     user = request.session.get("user")
-    if not user or user.get("role") != 'admin': return RedirectResponse("/", status_code=303)
+    if not user: return RedirectResponse("/login")
+    if user.get("role") != 'admin':
+        raise HTTPException(status_code=403, detail="Acceso denegado.")
     
     supabase.table("movimientos").delete().eq("usuario_id", id).execute()
     supabase.table("tarjetas").delete().eq("usuario_id", id).execute()
@@ -275,12 +285,10 @@ async def confirmar_eliminar_tarjeta(request: Request, nombre: str):
     user = request.session.get("user")
     if not user: return RedirectResponse("/login")
     
-    # Verificamos que la tarjeta exista y pertenezca al usuario
     res = supabase.table("tarjetas").select("*").eq("nombre_tarjeta", nombre).eq("usuario_id", user["id"]).execute()
     if not res.data:
         return RedirectResponse("/")
         
-    # Renderizamos una vista de confirmación segura directamente desde el servidor
     html_content = f"""
     <!DOCTYPE html>
     <html>
