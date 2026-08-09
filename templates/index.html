@@ -116,28 +116,28 @@
 <body>
 
 <nav class="nav-bar">
-        <div style="display: flex; flex-direction: column;">
-            <a href="/" class="nav-brand">💳 Control Tarjetas Crédito</a>
-            <span style="font-size: 0.75em; color: #888; margin-top: 2px;">Registro de movimientos (compras y abonos)</span>
-        </div>
-        
-        <button class="menu-toggle" onclick="toggleMenu()">☰</button>
+    <div style="display: flex; flex-direction: column;">
+        <a href="/" class="nav-brand">💳 Control Tarjetas Crédito</a>
+        <span style="font-size: 0.85em; color: #aaa; margin-top: 3px;">Registro de movimientos (compras y abonos)</span>
+    </div>
+    
+    <button class="menu-toggle" onclick="toggleMenu()">☰</button>
 
-        <div class="nav-menu" id="navMenu">
-            <a href="/" class="nav-link">🏠 Inicio</a>
-            <a href="/reportes" class="nav-link">📊 Reportes Excel</a>
-            {% if user.role == 'admin' %}
-            <a href="/admin/usuarios" class="nav-link" style="color: #a0a0ff;">👥 Usuarios</a>
-            {% endif %}
-            
-            <div class="user-info" style="display: flex; align-items: center; gap: 15px; padding: 0 15px;">
-                <span style="font-size: 0.9em; color: #888;">👤 {{ user.username }} {% if user.role == 'admin' %}<span class="admin-tag">Admin</span>{% endif %}</span>
-                <a href="/logout" style="text-decoration: none;">
-                    <button style="background-color: #ff5555;">Cerrar Sesión</button>
-                </a>
-            </div>
+    <div class="nav-menu" id="navMenu">
+        <a href="/" class="nav-link">🏠 Inicio</a>
+        <a href="/reportes" class="nav-link">📊 Reportes Excel</a>
+        {% if user.role == 'admin' %}
+        <a href="/admin/usuarios" class="nav-link" style="color: #a0a0ff;">👥 Usuarios</a>
+        {% endif %}
+        
+        <div class="user-info" style="display: flex; align-items: center; gap: 15px; padding: 0 15px;">
+            <span style="font-size: 0.9em; color: #888;">👤 {{ user.username }} {% if user.role == 'admin' %}<span class="admin-tag">Admin</span>{% endif %}</span>
+            <a href="/logout" style="text-decoration: none;">
+                <button style="background-color: #ff5555;">Cerrar Sesión</button>
+            </a>
         </div>
-    </nav>
+    </div>
+</nav>
 
     <h2>Mis Tarjetas</h2>
     <p class="subtitle">Selecciona una tarjeta para registrar movimientos:</p>
