@@ -166,7 +166,7 @@
         <a href="/tarjetas/nueva" class="btn-plus"><span>+</span></a>
     </div>
 
-    <dialog id="modalEliminar" style="background: var(--surface); color: var(--text); border: 1px solid #333; border-radius: 12px; padding: 20px; max-width: 350px; width: 90%;">
+<dialog id="modalEliminar" style="background: var(--surface); color: var(--text); border: 1px solid #333; border-radius: 12px; padding: 20px; max-width: 350px; width: 90%;">
         <style>
             #modalEliminar button {
                 width: auto !important;
@@ -175,9 +175,10 @@
             }
         </style>
         <div style="text-align: center;">
-            <h3 style="margin-top: 0;">¿Eliminar tarjeta?</h3>
-            <p style="font-size: 0.9em; color: #bbb;">Se borrará la tarjeta <b id="nombreTarjetaModal"></b> y todos sus movimientos.</p>
+            <h3 style="margin-top: 0;">🔒 Confirmación Requerida</h3>
+            <p style="font-size: 0.9em; color: #bbb;">Se borrará la tarjeta <b id="nombreTarjetaModal"></b> y todos sus movimientos. Ingresa tu contraseña para confirmar:</p>
             <form id="formEliminar" method="POST" style="margin-top: 20px; text-align: center;">
+                <input type="password" name="password" placeholder="Tu contraseña" required style="margin-bottom: 15px;">
                 <button type="submit" style="background-color: #ff5555; border: 1px solid #ff5555; color: white; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 0.9em; margin-right: 8px;">Sí, eliminar</button>
                 <button type="button" onclick="document.getElementById('modalEliminar').close()" style="background: #444; border: 1px solid #555; color: white; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 0.9em;">Cancelar</button>
             </form>
