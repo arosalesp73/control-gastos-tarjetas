@@ -84,7 +84,7 @@ button { width: 100%; padding: 10px; background: var(--accent); border: none; co
 .error-msg { color: #ff5555; background: rgba(255,85,85,0.1); padding: 10px; border-radius: 5px; margin-bottom: 15px; text-align: center; border: 1px solid #ff5555; }
 """
 
-@app.get("/instalar-admin-secreto")
+@app.get("/instalar-admin-secreto", response_class=HTMLResponse)
 async def instalar_admin():
     check = supabase.table("usuarios").select("id").execute()
     if len(check.data) == 0:
@@ -94,8 +94,33 @@ async def instalar_admin():
             "password": password_hash, 
             "role": "admin"
         }).execute()
-        return HTMLResponse("<h1>Admin creado. <a href='/login'>Ir al Login</a></h1>")
-    return HTMLResponse("<h1>Acceso denegado.</h1>")
+        return HTMLResponse(f"""
+        <!DOCTYPE html>
+        <html>
+        <head><title>Admin Creado</title><style>{DARK_CSS}</style><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+        <body style="display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0;">
+            <div class="card" style="max-width: 400px; width: 90%; text-align: center;">
+                <h2 style="color: #4ecca3; margin-top: 0;">✨ ¡Admin Creado!</h2>
+                <p style="color: #bbb; font-size: 0.95em;">Se ha configurado el usuario administrador correctamente.</p>
+                <a href="/login" style="display: block; margin-top: 20px; padding: 10px; background: var(--accent); color: white; text-decoration: none; border-radius: 5px;">Ir al Login</a>
+            </div>
+        </body>
+        </html>
+        """)
+    
+    return HTMLResponse(f"""
+    <!DOCTYPE html>
+    <html>
+    <head><title>Acceso Denegado</title><style>{DARK_CSS}</style><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+    <body style="display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0;">
+        <div class="card" style="max-width: 400px; width: 90%; text-align: center;">
+            <h2 style="color: #ff5555; margin-top: 0;">⚠️ Acceso Denegado</h2>
+            <p style="color: #bbb; font-size: 0.95em;">El administrador ya se encuentra registrado en el sistema.</p>
+            <a href="/login" style="display: block; margin-top: 20px; padding: 10px; background: var(--accent); color: white; text-decoration: none; border-radius: 5px;">Ir al Login</a>
+        </div>
+    </body>
+    </html>
+    """, status_code=403)
 
 @app.get("/", response_class=HTMLResponse)
 async def inicio(request: Request):
