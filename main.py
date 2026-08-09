@@ -304,11 +304,11 @@ async def g_tarjeta(request: Request, nombre_tarjeta: str = Form(...), dia_corte
     return RedirectResponse("/", status_code=303)
 
 @app.get("/tarjetas/editar/{nombre}", response_class=HTMLResponse)
-async def f_editar(request: Request, nombre: str):
+async def f_editar(request: Request, nombre: str, error: str = None):
     user = request.session.get("user")
     if not user: return RedirectResponse("/login")
     res = supabase.table("tarjetas").select("*").eq("nombre_tarjeta", nombre).eq("usuario_id", user["id"]).execute()
-    return templates.TemplateResponse("editar_tarjeta.html", {"request": request, "tarjeta": res.data[0], "css": DARK_CSS})
+    return templates.TemplateResponse("editar_tarjeta.html", {"request": request, "tarjeta": res.data[0], "css": DARK_CSS, "error": error})
 
 @app.post("/tarjetas/actualizar")
 async def actualizar_tarjeta(request: Request, nombre_tarjeta: str = Form(...), dia_corte: int = Form(...), dia_pago: int = Form(...), id: int = Form(...), password: str = Form(...)):
@@ -317,33 +317,13 @@ async def actualizar_tarjeta(request: Request, nombre_tarjeta: str = Form(...), 
     
     res_user = supabase.table("usuarios").select("password").eq("id", user["id"]).execute()
     if not res_user.data or not verificar_password(password, res_user.data[0]["password"]):
-        return HTMLResponse("""
-            <!DOCTYPE html>
-            <html>
-            <head><style>""" + DARK_CSS + """</style><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
-            <body style="display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0;">
-                <div class="card" style="text-align: center; max-width: 350px; width: 90%;">
-                    <p style="color: #ff5555; margin-bottom: 15px; font-weight: bold;">Contraseña incorrecta</p>
-                    <button onclick="window.history.back()">Regresar</button>
-                </div>
-                <script>
-                    window.onload = function() {
-                        const inputPass = document.querySelector('input[name="password"]');
-                        if (inputPass) {
-                            inputPass.setCustomValidity('Contraseña incorrecta');
-                            inputPass.reportValidity();
-                        }
-                    }
-                </script>
-            </body>
-            </html>
-        """)
+        return RedirectResponse(f"/tarjetas/editar/{urllib.parse.quote(nombre_tarjeta)}?error=Contraseña+incorrecta", status_code=303)
 
     supabase.table("tarjetas").update({"nombre_tarjeta": nombre_tarjeta, "dia_corte": dia_corte, "dia_pago": dia_pago}).eq("id", id).eq("usuario_id", user["id"]).execute()
     return RedirectResponse("/", status_code=303)
 
 @app.get("/tarjetas/confirmar-eliminar/{nombre}", response_class=HTMLResponse)
-async def confirmar_eliminar_tarjeta(request: Request, nombre: str):
+async def confirmar_eliminar_tarjeta(request: Request, nombre: str, error: str = None):
     user = request.session.get("user")
     if not user: return RedirectResponse("/login")
     
@@ -351,6 +331,8 @@ async def confirmar_eliminar_tarjeta(request: Request, nombre: str):
     if not res.data:
         return RedirectResponse("/")
         
+    error_html = f'<div class="error-msg">Contraseña incorrecta</div>' if error else ''
+    
     html_content = f"""
     <!DOCTYPE html>
     <html>
@@ -362,8 +344,10 @@ async def confirmar_eliminar_tarjeta(request: Request, nombre: str):
     <body style="display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0;">
         <div class="card" style="max-width: 400px; width: 90%; text-align: center;">
             <h2>¿Eliminar tarjeta?</h2>
+            {error_html}
             <p>Estás a punto de borrar la tarjeta <b>{nombre}</b> y todos sus movimientos asociados. Esta acción no se puede deshacer.</p>
             <form action="/tarjetas/eliminar/{urllib.parse.quote(nombre)}" method="POST" style="margin-top: 20px;">
+                <input type="password" name="password" placeholder="Tu contraseña actual" required id="passInput">
                 <button type="submit" style="background-color: #ff5555; margin-bottom: 10px;">Sí, eliminar</button>
                 <a href="/" style="display: block; padding: 10px; background: #444; color: white; text-decoration: none; border-radius: 5px;">Cancelar</a>
             </form>
@@ -371,6 +355,18 @@ async def confirmar_eliminar_tarjeta(request: Request, nombre: str):
     </body>
     </html>
     """
+    if error:
+        html_content += """
+        <script>
+            window.onload = function() {
+                const inputPass = document.getElementById('passInput');
+                if (inputPass) {
+                    inputPass.setCustomValidity('Contraseña incorrecta');
+                    inputPass.reportValidity();
+                }
+            }
+        </script>
+        """
     return HTMLResponse(content=html_content)
 
 @app.post("/tarjetas/eliminar/{nombre}")
@@ -380,27 +376,7 @@ async def e_tarjeta(request: Request, nombre: str, password: str = Form(...)):
     
     res_user = supabase.table("usuarios").select("password").eq("id", user["id"]).execute()
     if not res_user.data or not verificar_password(password, res_user.data[0]["password"]):
-        return HTMLResponse("""
-            <!DOCTYPE html>
-            <html>
-            <head><style>""" + DARK_CSS + """</style><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
-            <body style="display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0;">
-                <div class="card" style="text-align: center; max-width: 350px; width: 90%;">
-                    <p style="color: #ff5555; margin-bottom: 15px; font-weight: bold;">Contraseña incorrecta</p>
-                    <button onclick="window.history.back()">Regresar</button>
-                </div>
-                <script>
-                    window.onload = function() {
-                        const inputPass = document.querySelector('input[name="password"]');
-                        if (inputPass) {
-                            inputPass.setCustomValidity('Contraseña incorrecta');
-                            inputPass.reportValidity();
-                        }
-                    }
-                </script>
-            </body>
-            </html>
-        """)
+        return RedirectResponse(f"/tarjetas/confirmar-eliminar/{urllib.parse.quote(nombre)}?error=Contraseña+incorrecta", status_code=303)
 
     supabase.table("movimientos").delete().eq("tarjeta", nombre).eq("usuario_id", user["id"]).execute()
     supabase.table("tarjetas").delete().eq("nombre_tarjeta", nombre).eq("usuario_id", user["id"]).execute()
@@ -438,11 +414,11 @@ async def g_mov(request: Request, tarjeta_nombre: str = Form(...), concepto: str
     return RedirectResponse(f"/movimientos/nuevo/{tarjeta_nombre}?success=true", status_code=303)
 
 @app.get("/movimientos/editar/{id}", response_class=HTMLResponse)
-async def f_editar_mov(request: Request, id: int):
+async def f_editar_mov(request: Request, id: int, error: str = None):
     user = request.session.get("user")
     if not user: return RedirectResponse("/login")
     res = supabase.table("movimientos").select("*").eq("id", id).eq("usuario_id", user["id"]).execute()
-    return templates.TemplateResponse("editar_movimiento.html", {"request": request, "mov": res.data[0], "css": DARK_CSS})
+    return templates.TemplateResponse("editar_movimiento.html", {"request": request, "mov": res.data[0], "css": DARK_CSS, "error": error})
 
 @app.post("/movimientos/actualizar")
 async def actualizar_mov(request: Request, id: int = Form(...), concepto: str = Form(...), monto: float = Form(...), tipo_movimiento: str = Form(...), fecha: str = Form(...), tarjeta: str = Form(...), password: str = Form(...)):
@@ -451,27 +427,7 @@ async def actualizar_mov(request: Request, id: int = Form(...), concepto: str = 
     
     res_user = supabase.table("usuarios").select("password").eq("id", user["id"]).execute()
     if not res_user.data or not verificar_password(password, res_user.data[0]["password"]):
-        return HTMLResponse("""
-            <!DOCTYPE html>
-            <html>
-            <head><style>""" + DARK_CSS + """</style><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
-            <body style="display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0;">
-                <div class="card" style="text-align: center; max-width: 350px; width: 90%;">
-                    <p style="color: #ff5555; margin-bottom: 15px; font-weight: bold;">Contraseña incorrecta</p>
-                    <button onclick="window.history.back()">Regresar</button>
-                </div>
-                <script>
-                    window.onload = function() {
-                        const inputPass = document.querySelector('input[name="password"]');
-                        if (inputPass) {
-                            inputPass.setCustomValidity('Contraseña incorrecta');
-                            inputPass.reportValidity();
-                        }
-                    }
-                </script>
-            </body>
-            </html>
-        """)
+        return RedirectResponse(f"/movimientos/editar/{id}?error=Contraseña+incorrecta", status_code=303)
     
     monto_f = monto * -1 if tipo_movimiento == 'abono' else monto
     
