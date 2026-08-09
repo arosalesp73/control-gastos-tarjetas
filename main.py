@@ -315,10 +315,10 @@ async def actualizar_tarjeta(request: Request, nombre_tarjeta: str = Form(...), 
     user = request.session.get("user")
     if not user: return RedirectResponse("/login")
     
-    # Verificar contraseña del usuario actual
     res_user = supabase.table("usuarios").select("password").eq("id", user["id"]).execute()
     if not res_user.data or not verificar_password(password, res_user.data[0]["password"]):
-        return HTMLResponse("<script>alert('Contraseña incorrecta.'); window.history.back();</script>")
+        # AQUI ESTA EL CAMBIO: Manda una alerta y regresa a la página anterior sin borrar tus datos
+        return HTMLResponse("<script>alert('❌ Contraseña incorrecta. Inténtalo de nuevo.'); window.history.back();</script>")
 
     supabase.table("tarjetas").update({"nombre_tarjeta": nombre_tarjeta, "dia_corte": dia_corte, "dia_pago": dia_pago}).eq("id", id).eq("usuario_id", user["id"]).execute()
     return RedirectResponse("/", status_code=303)
@@ -359,10 +359,10 @@ async def e_tarjeta(request: Request, nombre: str, password: str = Form(...)):
     user = request.session.get("user")
     if not user: return RedirectResponse("/login")
     
-    # Verificar contraseña
     res_user = supabase.table("usuarios").select("password").eq("id", user["id"]).execute()
     if not res_user.data or not verificar_password(password, res_user.data[0]["password"]):
-        return HTMLResponse("<script>alert('Contraseña incorrecta.'); window.history.back();</script>")
+        # AQUI ESTA EL CAMBIO: Alerta de contraseña errónea al intentar borrar
+        return HTMLResponse("<script>alert('❌ Contraseña incorrecta. No se eliminó nada.'); window.history.back();</script>")
 
     supabase.table("movimientos").delete().eq("tarjeta", nombre).eq("usuario_id", user["id"]).execute()
     supabase.table("tarjetas").delete().eq("nombre_tarjeta", nombre).eq("usuario_id", user["id"]).execute()
@@ -411,10 +411,10 @@ async def actualizar_mov(request: Request, id: int = Form(...), concepto: str = 
     user = request.session.get("user")
     if not user: return RedirectResponse("/login")
     
-    # Verificar contraseña
     res_user = supabase.table("usuarios").select("password").eq("id", user["id"]).execute()
     if not res_user.data or not verificar_password(password, res_user.data[0]["password"]):
-        return HTMLResponse("<script>alert('Contraseña incorrecta.'); window.history.back();</script>")
+        # AQUI ESTA EL CAMBIO: Alerta clara si fallas la clave al editar el movimiento
+        return HTMLResponse("<script>alert('❌ Contraseña incorrecta. Los cambios no se guardaron.'); window.history.back();</script>")
     
     monto_f = monto * -1 if tipo_movimiento == 'abono' else monto
     
