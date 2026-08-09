@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eliminar Tarjeta</title>
+    <style>{{ css | safe }}</style>
+</head>
+<body style="display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0;">
+    <div class="card" style="max-width: 400px; width: 90%; text-align: center;">
+        <h2 style="color: #ff5555; margin-top: 0;">¿Eliminar tarjeta?</h2>
+        <p style="color: #bbb; font-size: 0.95em; margin-bottom: 20px;">
+            Estás a punto de borrar la tarjeta <strong>{{ tarjeta.nombre_tarjeta }}</strong> y todos sus movimientos asociados. Esta acción no se puede deshacer.
+        </p>
+        
+        <form action="/tarjetas/eliminar/{{ tarjeta.nombre_tarjeta }}" method="POST">
+            <input type="password" name="password" id="passInput" placeholder="Contraseña de usuario" required style="margin-bottom: 15px;">
+            <button type="submit" style="background: #ff5555; margin-bottom: 10px;">Eliminar</button>
+        </form>
+        
+        <a href="/" style="display: block; padding: 10px; background: #333; color: white; text-decoration: none; border-radius: 5px;">Cancelar</a>
+    </div>
+
+    {% if error %}
+    <script>
+        window.onload = function() {
+            const inputPass = document.getElementById('passInput');
+            if (inputPass) {
+                inputPass.setCustomValidity('Contraseña incorrecta');
+                inputPass.reportValidity();
+                inputPass.oninput = function() { this.setCustomValidity(''); };
+            }
+        }
+    </script>
+    {% endif %}
+</body>
+</html>
