@@ -331,43 +331,12 @@ async def confirmar_eliminar_tarjeta(request: Request, nombre: str, error: str =
     if not res.data:
         return RedirectResponse("/")
         
-    error_html = f'<div class="error-msg">Contraseña incorrecta</div>' if error else ''
-    
-    html_content = f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>Confirmar Eliminación</title>
-        <style>{DARK_CSS}</style>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    </head>
-    <body style="display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0;">
-        <div class="card" style="max-width: 400px; width: 90%; text-align: center;">
-            <h2>¿Eliminar tarjeta?</h2>
-            {error_html}
-            <p>Estás a punto de borrar la tarjeta <b>{nombre}</b> y todos sus movimientos asociados. Esta acción no se puede deshacer.</p>
-            <form action="/tarjetas/eliminar/{urllib.parse.quote(nombre)}" method="POST" style="margin-top: 20px;">
-                <input type="password" name="password" placeholder="Tu contraseña actual" required id="passInput">
-                <button type="submit" style="background-color: #ff5555; margin-bottom: 10px;">Sí, eliminar</button>
-                <a href="/" style="display: block; padding: 10px; background: #444; color: white; text-decoration: none; border-radius: 5px;">Cancelar</a>
-            </form>
-        </div>
-    </body>
-    </html>
-    """
-    if error:
-        html_content += """
-        <script>
-            window.onload = function() {
-                const inputPass = document.getElementById('passInput');
-                if (inputPass) {
-                    inputPass.setCustomValidity('Contraseña incorrecta');
-                    inputPass.reportValidity();
-                }
-            }
-        </script>
-        """
-    return HTMLResponse(content=html_content)
+    return templates.TemplateResponse("confirmar_eliminar_tarjeta.html", {
+        "request": request, 
+        "tarjeta": res.data[0], 
+        "css": DARK_CSS, 
+        "error": error
+    })
 
 @app.post("/tarjetas/eliminar/{nombre}")
 async def e_tarjeta(request: Request, nombre: str, password: str = Form(...)):
