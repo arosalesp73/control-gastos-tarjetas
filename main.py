@@ -318,15 +318,25 @@ async def actualizar_tarjeta(request: Request, nombre_tarjeta: str = Form(...), 
     res_user = supabase.table("usuarios").select("password").eq("id", user["id"]).execute()
     if not res_user.data or not verificar_password(password, res_user.data[0]["password"]):
         return HTMLResponse("""
-            <script>
-                window.onload = function() {
-                    const inputPass = document.querySelector('input[name="password"]');
-                    if (inputPass) {
-                        inputPass.setCustomValidity('Contraseña incorrecta');
-                        inputPass.reportValidity();
+            <!DOCTYPE html>
+            <html>
+            <head><style>""" + DARK_CSS + """</style><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+            <body style="display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0;">
+                <div class="card" style="text-align: center; max-width: 350px; width: 90%;">
+                    <p style="color: #ff5555; margin-bottom: 15px; font-weight: bold;">Contraseña incorrecta</p>
+                    <button onclick="window.history.back()">Regresar</button>
+                </div>
+                <script>
+                    window.onload = function() {
+                        const inputPass = document.querySelector('input[name="password"]');
+                        if (inputPass) {
+                            inputPass.setCustomValidity('Contraseña incorrecta');
+                            inputPass.reportValidity();
+                        }
                     }
-                }
-            </script>
+                </script>
+            </body>
+            </html>
         """)
 
     supabase.table("tarjetas").update({"nombre_tarjeta": nombre_tarjeta, "dia_corte": dia_corte, "dia_pago": dia_pago}).eq("id", id).eq("usuario_id", user["id"]).execute()
@@ -371,15 +381,25 @@ async def e_tarjeta(request: Request, nombre: str, password: str = Form(...)):
     res_user = supabase.table("usuarios").select("password").eq("id", user["id"]).execute()
     if not res_user.data or not verificar_password(password, res_user.data[0]["password"]):
         return HTMLResponse("""
-            <script>
-                window.onload = function() {
-                    const inputPass = document.querySelector('input[name="password"]');
-                    if (inputPass) {
-                        inputPass.setCustomValidity('Contraseña incorrecta');
-                        inputPass.reportValidity();
+            <!DOCTYPE html>
+            <html>
+            <head><style>""" + DARK_CSS + """</style><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+            <body style="display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0;">
+                <div class="card" style="text-align: center; max-width: 350px; width: 90%;">
+                    <p style="color: #ff5555; margin-bottom: 15px; font-weight: bold;">Contraseña incorrecta</p>
+                    <button onclick="window.history.back()">Regresar</button>
+                </div>
+                <script>
+                    window.onload = function() {
+                        const inputPass = document.querySelector('input[name="password"]');
+                        if (inputPass) {
+                            inputPass.setCustomValidity('Contraseña incorrecta');
+                            inputPass.reportValidity();
+                        }
                     }
-                }
-            </script>
+                </script>
+            </body>
+            </html>
         """)
 
     supabase.table("movimientos").delete().eq("tarjeta", nombre).eq("usuario_id", user["id"]).execute()
@@ -432,15 +452,25 @@ async def actualizar_mov(request: Request, id: int = Form(...), concepto: str = 
     res_user = supabase.table("usuarios").select("password").eq("id", user["id"]).execute()
     if not res_user.data or not verificar_password(password, res_user.data[0]["password"]):
         return HTMLResponse("""
-            <script>
-                window.onload = function() {
-                    const inputPass = document.querySelector('input[name="password"]');
-                    if (inputPass) {
-                        inputPass.setCustomValidity('Contraseña incorrecta');
-                        inputPass.reportValidity();
+            <!DOCTYPE html>
+            <html>
+            <head><style>""" + DARK_CSS + """</style><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+            <body style="display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0;">
+                <div class="card" style="text-align: center; max-width: 350px; width: 90%;">
+                    <p style="color: #ff5555; margin-bottom: 15px; font-weight: bold;">Contraseña incorrecta</p>
+                    <button onclick="window.history.back()">Regresar</button>
+                </div>
+                <script>
+                    window.onload = function() {
+                        const inputPass = document.querySelector('input[name="password"]');
+                        if (inputPass) {
+                            inputPass.setCustomValidity('Contraseña incorrecta');
+                            inputPass.reportValidity();
+                        }
                     }
-                }
-            </script>
+                </script>
+            </body>
+            </html>
         """)
     
     monto_f = monto * -1 if tipo_movimiento == 'abono' else monto
