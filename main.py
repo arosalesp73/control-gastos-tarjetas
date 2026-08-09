@@ -203,7 +203,19 @@ async def panel_usuarios(request: Request):
     user = request.session.get("user")
     if not user: return RedirectResponse("/login")
     if user.get("role") != 'admin':
-        raise HTTPException(status_code=403, detail="Acceso denegado: Se requieren privilegios de administrador.")
+        return HTMLResponse(f"""
+        <!DOCTYPE html>
+        <html>
+        <head><title>Acceso Denegado</title><style>{DARK_CSS}</style><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+        <body style="display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0;">
+            <div class="card" style="max-width: 400px; width: 90%; text-align: center;">
+                <h2 style="color: #ff5555; margin-top: 0;">⚠️ Acceso Denegado</h2>
+                <p style="color: #bbb; font-size: 0.95em;">No tienes los privilegios de administrador necesarios para ver esta sección.</p>
+                <a href="/" style="display: block; margin-top: 20px; padding: 10px; background: var(--accent); color: white; text-decoration: none; border-radius: 5px;">Volver al Inicio</a>
+            </div>
+        </body>
+        </html>
+        """, status_code=403)
     res = supabase.table("usuarios").select("*").execute()
     return templates.TemplateResponse("usuarios.html", {"request": request, "user": user, "lista_usuarios": res.data, "css": DARK_CSS})
 
@@ -212,7 +224,7 @@ async def c_usuario(request: Request, nuevo_username: str = Form(...), nuevo_pas
     user = request.session.get("user")
     if not user: return RedirectResponse("/login")
     if user.get("role") != 'admin':
-        raise HTTPException(status_code=403, detail="Acceso denegado.")
+        return HTMLResponse("<h1>403 - Acceso Denegado</h1>", status_code=403)
     password_hash = generar_hash(nuevo_password)
     supabase.table("usuarios").insert({"username": nuevo_username, "password": password_hash, "role": nuevo_role}).execute()
     return RedirectResponse("/admin/usuarios", status_code=303)
@@ -222,7 +234,7 @@ async def f_edit_user(request: Request, id: int):
     user = request.session.get("user")
     if not user: return RedirectResponse("/login")
     if user.get("role") != 'admin':
-        raise HTTPException(status_code=403, detail="Acceso denegado.")
+        return HTMLResponse("<h1>403 - Acceso Denegado</h1>", status_code=403)
     res = supabase.table("usuarios").select("*").eq("id", id).execute()
     return templates.TemplateResponse("editar_usuario.html", {"request": request, "u_edit": res.data[0], "css": DARK_CSS})
 
@@ -231,7 +243,7 @@ async def actualizar_usuario(request: Request, id: int = Form(...), username: st
     user = request.session.get("user")
     if not user: return RedirectResponse("/login")
     if user.get("role") != 'admin':
-        raise HTTPException(status_code=403, detail="Acceso denegado.")
+        return HTMLResponse("<h1>403 - Acceso Denegado</h1>", status_code=403)
     password_hash = generar_hash(password)
     supabase.table("usuarios").update({"username": username, "password": password_hash, "role": role}).eq("id", id).execute()
     return RedirectResponse("/admin/usuarios", status_code=303)
@@ -241,7 +253,7 @@ async def e_usuario(request: Request, id: int):
     user = request.session.get("user")
     if not user: return RedirectResponse("/login")
     if user.get("role") != 'admin':
-        raise HTTPException(status_code=403, detail="Acceso denegado.")
+        return HTMLResponse("<h1>403 - Acceso Denegado</h1>", status_code=403)
     
     supabase.table("movimientos").delete().eq("usuario_id", id).execute()
     supabase.table("tarjetas").delete().eq("usuario_id", id).execute()
