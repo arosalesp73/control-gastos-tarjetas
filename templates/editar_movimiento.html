@@ -62,14 +62,15 @@
 
 {% if error %}
 <script>
-    window.onload = function() {
+    document.addEventListener("DOMContentLoaded", function() {
         const inputPass = document.getElementById('passInput');
         if (inputPass) {
+            inputPass.focus();
             inputPass.setCustomValidity('Contraseña incorrecta');
             inputPass.reportValidity();
             inputPass.oninput = function() { this.setCustomValidity(''); };
         }
-    }
+    });
 </script>
 {% endif %}
     
