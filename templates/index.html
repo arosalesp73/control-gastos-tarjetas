@@ -185,7 +185,7 @@
         </div>
     </dialog>
 
-    <script>
+<script>
         function toggleMenu() {
             const menu = document.getElementById('navMenu');
             menu.classList.toggle('active');
@@ -196,6 +196,16 @@
             document.getElementById('formEliminar').action = '/tarjetas/eliminar/' + encodeURIComponent(nombre);
             document.getElementById('modalEliminar').showModal();
         }
+
+        // Cerrar el menú automáticamente al hacer clic en una opción en dispositivos móviles
+        document.querySelectorAll('.nav-menu .nav-link').forEach(link => {
+            link.addEventListener('click', () => {
+                const menu = document.getElementById('navMenu');
+                if (menu.classList.contains('active')) {
+                    menu.classList.remove('active');
+                }
+            });
+        });
     </script>
 
 </body>
