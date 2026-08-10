@@ -153,7 +153,7 @@ async def logout(request: Request):
     return response
 
 @app.get("/reportes", response_class=HTMLResponse)
-async def rep_ui(request: Request, response: Response):
+async def rep_ui(request: Request, response: Response, error: str = None):
     response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
     response.headers["Pragma"] = "no-cache"
     response.headers["Expires"] = "0"
@@ -161,7 +161,7 @@ async def rep_ui(request: Request, response: Response):
     user = request.session.get("user")
     if not user: return RedirectResponse("/login")
     res = supabase.table("tarjetas").select("nombre_tarjeta").eq("usuario_id", user["id"]).execute()
-    return templates.TemplateResponse("reportes.html", {"request": request, "tarjetas": res.data, "css": DARK_CSS})
+    return templates.TemplateResponse("reportes.html", {"request": request, "tarjetas": res.data, "css": DARK_CSS, "error": error})
 
 @app.get("/reportes/generar")
 @app.get("/reportes/excel")
@@ -177,14 +177,14 @@ async def generar_excel(request: Request, tarjeta: str = "TODAS", fecha_inicio: 
         res = query.execute()
         
         if not res.data: 
-            return HTMLResponse("<script>alert('No hay registros en esas fechas para esta tarjeta.'); window.location.href='/reportes';</script>")
+            return RedirectResponse(f"/reportes?error=No+hay+registros+en+esas+fechas+para+esta+tarjeta", status_code=303)
         
         df = pd.DataFrame(res.data)
         df["fecha"] = pd.to_datetime(df["fecha"], errors='coerce')
         df = df.dropna(subset=["fecha"]).sort_values(by="fecha", ascending=True)
         
         if df.empty:
-            return HTMLResponse("<script>alert('No hay registros válidos.'); window.location.href='/reportes';</script>")
+            return RedirectResponse(f"/reportes?error=No+hay+registros+válidos.", status_code=303)
         
         df["fecha_limpia"] = df["fecha"].dt.strftime('%Y-%m-%d')
         df_final = df[["fecha_limpia", "concepto", "monto", "tipo"]].copy()
@@ -221,8 +221,8 @@ async def generar_excel(request: Request, tarjeta: str = "TODAS", fecha_inicio: 
             }
         )
     except Exception as e:
-        return HTMLResponse(f"<script>alert('Error: {str(e)}'); window.location.href='/reportes';</script>")
-
+        return RedirectResponse(f"/reportes?error=Error:+{urllib.parse.quote(str(e))}", status_code=303)
+        
 @app.get("/admin/usuarios", response_class=HTMLResponse)
 async def panel_usuarios(request: Request):
     user = request.session.get("user")
