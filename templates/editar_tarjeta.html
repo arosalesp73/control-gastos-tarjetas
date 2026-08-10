@@ -23,12 +23,26 @@
                 <input type="number" name="dia_pago" value="{{ tarjeta.dia_pago }}" min="1" max="31" required>
 
                 <label>Contraseña para confirmar:</label>
-                <input type="password" name="password" placeholder="Tu contraseña actual" required>                
+                <input type="password" name="password" id="passInput" placeholder="Contraseña de usuario" required>
                 
                 <button type="submit">Actualizar Datos</button>
             </form>
             <a href="/" style="display: block; text-align: center; margin-top: 20px; color: #666; text-decoration: none; font-size: 0.85em;">Cancelar</a>
         </div>
     </div>
+    
+    {% if error %}
+    <script>
+        window.onload = function() {
+            const inputPass = document.getElementById('passInput');
+            if (inputPass) {
+                inputPass.setCustomValidity('Contraseña incorrecta');
+                inputPass.reportValidity();
+                inputPass.oninput = function() { this.setCustomValidity(''); };
+            }
+        }
+    </script>
+    {% endif %}
+    
 </body>
 </html>
