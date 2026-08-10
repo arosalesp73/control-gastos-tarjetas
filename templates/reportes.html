@@ -1,39 +1,115 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
-    <title>Reportes</title>
-    <style>{{ css | safe }}</style>
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configurar Reporte</title>
+    <style>
+        {{ css | safe }}
+        .container { max-width: 400px; margin: 30px auto; padding: 20px; }
+        .card { background: var(--surface); padding: 25px; border-radius: 12px; border: 1px solid #333; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; color: #aaa; font-size: 0.85em; }
+        select, input, button { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #444; background: #0f0f1a; color: white; box-sizing: border-box; }
+        button { background: #6c63ff; border: none; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        
+        /* Botón verde para WhatsApp */
+        .btn-whatsapp { background: #25D366; color: black; margin-top: 10px; font-weight: bold; }
+        
+        .back-link { display: block; text-align: center; margin-top: 20px; color: #666; text-decoration: none; font-size: 0.85em; }
+    </style>
 </head>
-<body style="display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0;">
-    <div class="card" style="max-width: 450px; width: 90%;">
-        <h2 style="margin-top: 0; text-align: center;">Generar Reporte</h2>
-        
-        <!-- AQUI DEBE IR EXACTAMENTE EL MENSAJE DE ERROR -->
-        {% if error %}
-        <div class="error-msg">{{ error }}</div>
-        {% endif %}
+<body>
+    <div class="container">
+        <div class="card">
+            <h2>📊 Exportar Excel</h2>
+            <form id="formReporte">
+                <div class="form-group">
+                    <label>Seleccionar Tarjeta:</label>
+                    <select name="tarjeta" id="tarjeta">
+                        <option value="TODAS">-- Todas las tarjetas --</option>
+                        {% for t in tarjetas %}
+                        <option value="{{ t.nombre_tarjeta }}">{{ t.nombre_tarjeta }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
 
-        <form action="/reportes/generar" method="get">
-            <label>Tarjeta:</label>
-            <select name="tarjeta">
-                <option value="TODAS">TODAS LAS TARJETAS</option>
-                {% for t in tarjetas %}
-                <option value="{{ t.nombre_tarjeta }}">{{ t.nombre_tarjeta }}</option>
-                {% endfor %}
-            </select>
+                <div class="form-group">
+                    <label>Desde:</label>
+                    <input type="date" name="fecha_inicio" id="fecha_inicio" required style="color-scheme: dark;">
+                </div>
 
-            <label>Fecha Inicio:</label>
-            <input type="date" name="fecha_inicio">
+                <div class="form-group">
+                    <label>Hasta:</label>
+                    <input type="date" name="fecha_fin" id="fecha_fin" required style="color-scheme: dark;">
+                </div>
 
-            <label>Fecha Fin:</label>
-            <input type="date" name="fecha_fin">
-
-            <button type="submit" style="margin-top: 15px;">Descargar Excel</button>
-        </form>
-        
-        <br>
-        <a href="/" style="display: block; text-align: center; color: var(--text); text-decoration: none;">Volver al Inicio</a>
+                <button type="button" onclick="descargarReporte()">Descargar Reporte</button>
+                <button type="button" class="btn-whatsapp" onclick="enviarWhatsApp()">🚀 Enviar Directo a WhatsApp</button>
+            </form>
+            <a href="/" class="back-link">Volver al inicio</a>
+        </div>
     </div>
+
+<script>
+    const hoy = new Date().toISOString().split('T')[0];
+    const primero = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
+    document.getElementById('fecha_inicio').value = primero;
+    document.getElementById('fecha_fin').value = hoy;
+
+    async function verificarDatos() {
+        const tarjeta = document.getElementById('tarjeta').value;
+        const inicio = document.getElementById('fecha_inicio').value;
+        const fin = document.getElementById('fecha_fin').value;
+
+        const url = `/reportes/excel?tarjeta=${encodeURIComponent(tarjeta)}&fecha_inicio=${inicio}&fecha_fin=${fin}`;
+        const res = await fetch(url);
+        
+        const contentType = res.headers.get("content-type") || "";
+        
+        if (!res.ok || contentType.includes("html") || contentType.includes("json")) {
+            const aviso = document.createElement("div");
+            aviso.innerHTML = "No hay registros en este periodo.";
+            aviso.style.cssText = "position:fixed; top:20px; left:50%; transform:translateX(-50%); background:#ff4c4c; color:white; padding:15px; border-radius:8px; z-index:9999; box-shadow: 0 4px 6px rgba(0,0,0,0.1);";
+            document.body.appendChild(aviso);
+            setTimeout(() => aviso.remove(), 3500);
+            return null;
+        }
+        
+        return res;
+    }
+
+    async function descargarReporte() {
+        const tarjeta = document.getElementById('tarjeta').value;
+        const res = await verificarDatos();
+        if (!res) return;
+
+        const blob = await res.blob();
+        const link = document.createElement('a');
+        link.href = window.URL.createObjectURL(blob);
+        link.download = `Reporte_${tarjeta}.xlsx`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    async function enviarWhatsApp() {
+        const tarjeta = document.getElementById('tarjeta').value;
+        const inicio = document.getElementById('fecha_inicio').value;
+        const fin = document.getElementById('fecha_fin').value;
+
+        const res = await verificarDatos();
+        if (!res) return;
+
+        const texto = encodeURIComponent(`📊 Reporte de Gastos\nTarjeta: ${tarjeta}\nDesde: ${inicio}\nHasta: ${fin}`);
+        
+        const link = document.createElement('a');
+        link.href = `https://wa.me/?text=${texto}`;
+        link.target = '_blank';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+</script>
 </body>
 </html>
