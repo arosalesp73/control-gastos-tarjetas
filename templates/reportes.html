@@ -79,18 +79,28 @@
         return res;
     }
 
-    async function descargarReporte() {
+async function descargarReporte() {
         const tarjeta = document.getElementById('tarjeta').value;
         const res = await verificarDatos();
         if (!res) return;
 
         const blob = await res.blob();
+        
+        // Crear un objeto URL para el blob
+        const url = window.URL.createObjectURL(blob);
+        
+        // Creamos un link invisible pero más compatible con móviles
         const link = document.createElement('a');
-        link.href = window.URL.createObjectURL(blob);
-        link.download = `Reporte_${tarjeta}.xlsx`;
+        link.href = url;
+        link.setAttribute('download', `Reporte_${tarjeta}.xlsx`);
+        
+        // Añadir al documento (necesario en algunos navegadores móviles)
         document.body.appendChild(link);
         link.click();
+        
+        // Limpieza
         document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
     }
 
     async function enviarWhatsApp() {
