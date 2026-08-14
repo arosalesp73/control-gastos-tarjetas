@@ -57,7 +57,7 @@
     document.getElementById('fecha_inicio').value = primero;
     document.getElementById('fecha_fin').value = hoy;
 
-async function verificarDatos() {
+    async function verificarDatos() {
         const tarjeta = document.getElementById('tarjeta').value;
         const inicio = document.getElementById('fecha_inicio').value;
         const fin = document.getElementById('fecha_fin').value;
@@ -65,8 +65,9 @@ async function verificarDatos() {
         const url = `/reportes/excel?tarjeta=${encodeURIComponent(tarjeta)}&fecha_inicio=${inicio}&fecha_fin=${fin}`;
         const res = await fetch(url);
         
-        // Si el estado es 404, significa que no hay registros
-        if (res.status === 404) {
+        const contentType = res.headers.get("content-type") || "";
+        
+        if (!res.ok || contentType.includes("html") || contentType.includes("json")) {
             const aviso = document.createElement("div");
             aviso.innerHTML = "No hay registros en este periodo.";
             aviso.style.cssText = "position:fixed; top:20px; left:50%; transform:translateX(-50%); background:#ff4c4c; color:white; padding:15px; border-radius:8px; z-index:9999; box-shadow: 0 4px 6px rgba(0,0,0,0.1);";
@@ -91,8 +92,8 @@ async function verificarDatos() {
         link.click();
         document.body.removeChild(link);
     }
-    
-async function enviarWhatsApp() {
+
+    async function enviarWhatsApp() {
         const tarjeta = document.getElementById('tarjeta').value;
         const inicio = document.getElementById('fecha_inicio').value;
         const fin = document.getElementById('fecha_fin').value;
