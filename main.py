@@ -177,36 +177,57 @@ async def generar_excel(request: Request, tarjeta: str = "TODAS", fecha_inicio: 
         res = query.execute()
         
         if not res.data: 
-            return HTMLResponse("<script>alert('No hay registros en esas fechas para esta tarjeta.'); window.location.href='/reportes';</script>")
+            return Response("No hay registros", status_code=404)
         
-        df = pd.DataFrame(res.data)
-        df["fecha"] = pd.to_datetime(df["fecha"], errors='coerce')
-        df = df.dropna(subset=["fecha"]).sort_values(by="fecha", ascending=True)
-        
-        if df.empty:
-            return HTMLResponse("<script>alert('No hay registros válidos.'); window.location.href='/reportes';</script>")
-        
-        df["fecha_limpia"] = df["fecha"].dt.strftime('%Y-%m-%d')
-        df_final = df[["fecha_limpia", "concepto", "monto", "tipo"]].copy()
-        df_final.columns = ["Fecha", "Concepto", "Monto", "Tipo"]
-        df_final["Monto"] = df_final["Monto"].map("{:.2f}".format)
-        
-        output = io.BytesIO()
-        with pd.ExcelWriter(output, engine='openpyxl') as writer:
-            df_final.to_excel(writer, index=False, sheet_name='Mis Gastos')
-            worksheet = writer.sheets['Mis Gastos']
-            
-            for col in worksheet.columns:
-                max_len = 0
-                col_letter = col[0].column_letter
-                for cell in col:
-                    try:
-                        if cell.value:
-                            max_len = max(max_len, len(str(cell.value)))
-                    except:
-                        pass
-                worksheet.column_dimensions[col_letter].width = max(max_len + 3, 12)
+        movimientos_validos = []
+        for m in res.data:
+            try:
+                f_obj = datetime.strptime(m["fecha"], "%Y-%m-%d")
+                movimientos_validos.append({
+                    "fecha_obj": f_obj,
+                    "fecha": m["fecha"],
+                    "concepto": m["concepto"],
+                    "monto": float(m["monto"]),
+                    "tipo": m["tipo"]
+                })
+            except:
+                pass
                 
+        if not movimientos_validos:
+            return Response("No hay registros válidos", status_code=404)
+            
+        movimientos_validos.sort(key=lambda x: x["fecha_obj"])
+        
+        from openpyxl import Workbook
+        wb = Workbook()
+        ws = wb.active
+        ws.title = 'Mis Gastos'
+        
+        ws.append(["Fecha", "Concepto", "Monto", "Tipo"])
+        
+        for item in movimientos_validos:
+            ws.append([
+                item["fecha"],
+                item["concepto"],
+                round(item["monto"], 2),
+                item["tipo"]
+            ])
+            
+        for col in ws.columns:
+            max_len = 0
+            col_letter = col[0].column_letter
+            for idx, cell in enumerate(col):
+                try:
+                    if cell.value is not None:
+                        if idx > 0 and col_letter == 'C':
+                            cell.number_format = '#,##0.00'
+                        max_len = max(max_len, len(str(cell.value)))
+                except:
+                    pass
+            ws.column_dimensions[col_letter].width = max(max_len + 3, 12)
+            
+        output = io.BytesIO()
+        wb.save(output)
         output.seek(0)
         
         fecha_hoy = datetime.now().strftime("%d-%m-%Y")
@@ -221,7 +242,8 @@ async def generar_excel(request: Request, tarjeta: str = "TODAS", fecha_inicio: 
             }
         )
     except Exception as e:
-        return HTMLResponse(f"<script>alert('Error: {str(e)}'); window.location.href='/reportes';</script>")
+        return Response(f"Error: {str(e)}", status_code=500)
+        
         
 @app.get("/admin/usuarios", response_class=HTMLResponse)
 async def panel_usuarios(request: Request):
