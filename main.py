@@ -169,80 +169,57 @@ async def generar_excel(request: Request, tarjeta: str = "TODAS", fecha_inicio: 
     user = request.session.get("user")
     if not user: return RedirectResponse("/login")
     
-    try:
-        query = supabase.table("movimientos").select("*").eq("usuario_id", user["id"])
-        if tarjeta != "TODAS": query = query.eq("tarjeta", tarjeta)
-        if fecha_inicio: query = query.gte("fecha", fecha_inicio)
-        if fecha_fin: query = query.lte("fecha", fecha_fin)
-        res = query.execute()
+    # 1. Obtenemos los datos
+    query = supabase.table("movimientos").select("*").eq("usuario_id", user["id"])
+    if tarjeta != "TODAS": query = query.eq("tarjeta", tarjeta)
+    if fecha_inicio: query = query.gte("fecha", fecha_inicio)
+    if fecha_fin: query = query.lte("fecha", fecha_fin)
+    res = query.execute()
+    
+    # 2. Si no hay datos, devolvemos un código 204 (No Content) o un 404. 
+    # Esto es crucial para que tu JavaScript "verificarDatos" pueda detectar que no hay nada.
+    if not res.data: 
+        return Response(status_code=404)
         
-        if not res.data: 
-            return Response("No hay registros", status_code=404)
-        
-        movimientos_validos = []
-        for m in res.data:
-            try:
-                f_obj = datetime.strptime(m["fecha"], "%Y-%m-%d")
-                movimientos_validos.append({
-                    "fecha_obj": f_obj,
-                    "fecha": m["fecha"],
-                    "concepto": m["concepto"],
-                    "monto": float(m["monto"]),
-                    "tipo": m["tipo"]
-                })
-            except:
-                pass
-                
-        if not movimientos_validos:
-            return Response("No hay registros válidos", status_code=404)
-            
-        movimientos_validos.sort(key=lambda x: x["fecha_obj"])
-        
-        from openpyxl import Workbook
-        wb = Workbook()
-        ws = wb.active
-        ws.title = 'Mis Gastos'
-        
-        ws.append(["Fecha", "Concepto", "Monto", "Tipo"])
-        
-        for item in movimientos_validos:
-            ws.append([
-                item["fecha"],
-                item["concepto"],
-                round(item["monto"], 2),
-                item["tipo"]
-            ])
-            
-        for col in ws.columns:
+    # 3. Procesamos con Pandas tal y como lo tenías originalmente
+    df = pd.DataFrame(res.data)
+    df["fecha"] = pd.to_datetime(df["fecha"], errors='coerce')
+    df = df.dropna(subset=["fecha"]).sort_values(by="fecha", ascending=True)
+    
+    if df.empty:
+        return Response(status_code=404)
+    
+    df["fecha_limpia"] = df["fecha"].dt.strftime('%Y-%m-%d')
+    df_final = df[["fecha_limpia", "concepto", "monto", "tipo"]].copy()
+    df_final.columns = ["Fecha", "Concepto", "Monto", "Tipo"]
+    df_final["Monto"] = df_final["Monto"].map("{:.2f}".format)
+    
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df_final.to_excel(writer, index=False, sheet_name='Mis Gastos')
+        # ... (Tu lógica original de ajuste de celdas)
+        worksheet = writer.sheets['Mis Gastos']
+        for col in worksheet.columns:
             max_len = 0
             col_letter = col[0].column_letter
-            for idx, cell in enumerate(col):
+            for cell in col:
                 try:
-                    if cell.value is not None:
-                        if idx > 0 and col_letter == 'C':
-                            cell.number_format = '#,##0.00'
+                    if cell.value:
                         max_len = max(max_len, len(str(cell.value)))
-                except:
-                    pass
-            ws.column_dimensions[col_letter].width = max(max_len + 3, 12)
+                except: pass
+            worksheet.column_dimensions[col_letter].width = max(max_len + 3, 12)
             
-        output = io.BytesIO()
-        wb.save(output)
-        output.seek(0)
-        
-        fecha_hoy = datetime.now().strftime("%d-%m-%Y")
-        nombre_archivo = f"Reporte_{tarjeta}_{fecha_hoy}.xlsx"
-        
-        return StreamingResponse(
-            output, 
-            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            headers={
-                "Content-Disposition": f"attachment; filename={nombre_archivo}",
-                "Access-Control-Expose-Headers": "Content-Disposition"
-            }
-        )
-    except Exception as e:
-        return Response(f"Error: {str(e)}", status_code=500)
+    output.seek(0)
+    
+    # 4. Retornamos el archivo. Es vital que NO sea un HTML para que tu JS lo lea como blob.
+    return StreamingResponse(
+        output, 
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={
+            "Content-Disposition": f"attachment; filename=Reporte_{tarjeta}.xlsx",
+            "Access-Control-Expose-Headers": "Content-Disposition"
+        }
+    )
         
         
 @app.get("/admin/usuarios", response_class=HTMLResponse)
