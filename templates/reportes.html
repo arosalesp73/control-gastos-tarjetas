@@ -113,13 +113,10 @@ async function enviarWhatsApp() {
 
         const texto = encodeURIComponent(`📊 Reporte de Gastos\nTarjeta: ${tarjeta}\nDesde: ${inicio}\nHasta: ${fin}`);
         
-        const link = document.createElement('a');
-        link.href = `https://api.whatsapp.com/send?text=${texto}`;
-        link.target = '_blank';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        // Usamos window.open para forzar la apertura en la web y evitar que el navegador invente el esquema whatsapp://
+        window.open(`https://api.whatsapp.com/send?text=${texto}`, '_blank');
     }
+    
 </script>
 </body>
 </html>
