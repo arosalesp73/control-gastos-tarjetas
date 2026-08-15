@@ -103,18 +103,19 @@ async function descargarReporte() {
         window.URL.revokeObjectURL(url);
     }
 
-async function enviarWhatsApp() {
+function enviarWhatsApp() {
         const tarjeta = document.getElementById('tarjeta').value;
         const inicio = document.getElementById('fecha_inicio').value;
         const fin = document.getElementById('fecha_fin').value;
 
-        const res = await verificarDatos();
-        if (!res) return;
-
         const texto = encodeURIComponent(`📊 Reporte de Gastos\nTarjeta: ${tarjeta}\nDesde: ${inicio}\nHasta: ${fin}`);
         
-        // Usamos window.open para forzar la apertura en la web y evitar que el navegador invente el esquema whatsapp://
-        window.open(`https://api.whatsapp.com/send?text=${texto}`, '_blank');
+        const link = document.createElement('a');
+        link.href = `https://wa.me/?text=${texto}`;
+        link.target = '_blank';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     }
     
 </script>
