@@ -103,13 +103,16 @@ async function descargarReporte() {
         window.URL.revokeObjectURL(url);
     }
 
-function enviarWhatsApp() {
+    async function enviarWhatsApp() {
         const tarjeta = document.getElementById('tarjeta').value;
         const inicio = document.getElementById('fecha_inicio').value;
         const fin = document.getElementById('fecha_fin').value;
 
+        const res = await verificarDatos();
+        if (!res) return;
+
         const texto = encodeURIComponent(`📊 Reporte de Gastos\nTarjeta: ${tarjeta}\nDesde: ${inicio}\nHasta: ${fin}`);
-        
+
         const link = document.createElement('a');
         link.href = `https://wa.me/?text=${texto}`;
         link.target = '_blank';
