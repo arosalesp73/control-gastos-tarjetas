@@ -16,7 +16,8 @@
         /* Botón verde para WhatsApp */
         .btn-whatsapp { background: #25D366; color: black; margin-top: 10px; font-weight: bold; }
         
-        .back-link { display: block; text-align: center; margin-top: 20px; color: #666; text-decoration: none; font-size: 0.85em; }
+        .back-link { display: block; text-align: center; margin-top: 20px; color: #aaa; text-decoration: none; font-size: 0.9em; background: #222; padding: 10px; border-radius: 8px; border: 1px solid #444; }
+        .back-link:hover { background: #333; color: white; }
     </style>
 </head>
 <body>
@@ -47,6 +48,9 @@
                 <button type="button" onclick="descargarReporte()">Descargar Reporte</button>
                 <button type="button" class="btn-whatsapp" onclick="enviarWhatsApp()">🚀 Enviar Directo a WhatsApp</button>
             </form>
+
+            <!-- Enlace para regresar a la pantalla principal -->
+            <a href="/" class="back-link">⬅ Regresar al Inicio</a>
         </div>
     </div>
 
@@ -64,16 +68,59 @@
             setTimeout(() => aviso.remove(), 3500);
         }
 
-        function descargarReporte() {
+        async function descargarReporte() {
             const tarjeta = document.getElementById('tarjeta').value;
             const inicio = document.getElementById('fecha_inicio').value;
             const fin = document.getElementById('fecha_fin').value;
 
-            window.location.href = `/reportes/excel?tarjeta=${encodeURIComponent(tarjeta)}&fecha_inicio=${inicio}&fecha_fin=${fin}`;
+            const url = `/reportes/excel?tarjeta=${encodeURIComponent(tarjeta)}&fecha_inicio=${inicio}&fecha_fin=${fin}`;
+            
+            try {
+                const res = await fetch(url);
+                
+                if (!res.ok) {
+                    mostrarAviso("No hay registros en este periodo para esta tarjeta.");
+                    return;
+                }
+
+                const blob = await res.blob();
+                const blobUrl = window.URL.createObjectURL(blob);
+                
+                const link = document.createElement('a');
+                link.href = blobUrl;
+                link.setAttribute('download', `Reporte_${tarjeta}_${inicio}_al_${fin}.xlsx`);
+                
+                document.body.appendChild(link);
+                link.click();
+                
+                document.body.removeChild(link);
+                window.URL.revokeObjectURL(blobUrl);
+            } catch (error) {
+                mostrarAviso("Ocurrió un error al generar el reporte.");
+            }
         }
 
-        function enviarWhatsApp() {
-            descargarReporte();
+        async function enviarWhatsApp() {
+            const tarjeta = document.getElementById('tarjeta').value;
+            const inicio = document.getElementById('fecha_inicio').value;
+            const fin = document.getElementById('fecha_fin').value;
+
+            const url = `/reportes/excel?tarjeta=${encodeURIComponent(tarjeta)}&fecha_inicio=${inicio}&fecha_fin=${fin}`;
+            
+            try {
+                const res = await fetch(url);
+                if (!res.ok) {
+                    mostrarAviso("No hay registros en este periodo para enviar por WhatsApp.");
+                    return;
+                }
+
+                const texto = `📊 Reporte de Gastos\nTarjeta: ${tarjeta}\nDesde: ${inicio}\nHasta: ${fin}`;
+                const urlWhatsApp = `https://api.whatsapp.com/send?text=${encodeURIComponent(texto)}`;
+                
+                window.open(urlWhatsApp, '_blank');
+            } catch (error) {
+                mostrarAviso("Ocurrió un error al validar los datos para WhatsApp.");
+            }
         }
     </script>
 </body>
