@@ -96,31 +96,29 @@
             }
         }
 
-async function enviarWhatsApp() {
-        const tarjeta = document.getElementById('tarjeta').value;
-        const inicio = document.getElementById('fecha_inicio').value;
-        const fin = document.getElementById('fecha_fin').value;
-
-        const url = `/reportes/excel?tarjeta=${encodeURIComponent(tarjeta)}&fecha_inicio=${inicio}&fecha_fin=${fin}`;
+        async function enviarWhatsApp() {
+                const tarjeta = document.getElementById('tarjeta').value;
+                const inicio = document.getElementById('fecha_inicio').value;
+                const fin = document.getElementById('fecha_fin').value;
         
-        try {
-            const res = await fetch(url);
-            if (!res.ok) {
-                mostrarAviso("No hay registros en este periodo para enviar por WhatsApp.");
-                return;
+                const url = `/reportes/excel?tarjeta=${encodeURIComponent(tarjeta)}&fecha_inicio=${inicio}&fecha_fin=${fin}`;
+                
+                try {
+                    const res = await fetch(url);
+                    if (!res.ok) {
+                        mostrarAviso("No hay registros en este periodo para enviar por WhatsApp.");
+                        return;
+                    }
+        
+                    const texto = `📊 Reporte de Gastos\nTarjeta: ${tarjeta}\nDesde: ${inicio}\nHasta: ${fin}`;
+                    const urlWhatsApp = `https://api.whatsapp.com/send?text=${encodeURIComponent(texto)}`;
+                    
+                    window.open(urlWhatsApp, '_blank');
+                } catch (error) {
+                    mostrarAviso("Ocurrió un error al validar los datos para WhatsApp.");
+                }
             }
-
-            const texto = `📊 Reporte de Gastos%0ATarjeta: ${encodeURIComponent(tarjeta)}%0ADesde: ${inicio}%0AHasta: ${fin}`;
-            const link = document.createElement('a');
-            link.href = `https://api.whatsapp.com/send?text=${texto}`;
-            link.target = '_blank';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        } catch (error) {
-            mostrarAviso("Ocurrió un error al validar los datos para WhatsApp.");
-        }
-    }
+        
     </script>
 </body>
 </html>
