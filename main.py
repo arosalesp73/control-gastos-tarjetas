@@ -176,14 +176,14 @@ async def generar_excel(request: Request, tarjeta: str = "TODAS", fecha_inicio: 
     res = query.execute()
     
     if not res.data: 
-        return HTMLResponse("<script>alert('No hay registros en esas fechas para esta tarjeta.'); window.location.href='/reportes';</script>")
+        return Response(status_code=404)
 
     df = pd.DataFrame(res.data)
     df["fecha"] = pd.to_datetime(df["fecha"], errors='coerce')
     df = df.dropna(subset=["fecha"]).sort_values(by="fecha", ascending=True)
     
     if df.empty:
-        return HTMLResponse("<script>alert('No hay registros válidos.'); window.location.href='/reportes';</script>")
+        return Response(status_code=404)
     
     df["fecha_limpia"] = df["fecha"].dt.strftime('%Y-%m-%d')
     df_final = df[["fecha_limpia", "concepto", "monto", "tipo"]].copy()
@@ -195,7 +195,6 @@ async def generar_excel(request: Request, tarjeta: str = "TODAS", fecha_inicio: 
         df_final.to_excel(writer, index=False, sheet_name='Mis Gastos')
         worksheet = writer.sheets['Mis Gastos']
         
-        # Ajuste automático de ancho
         for col in worksheet.columns:
             max_len = 0
             col_letter = col[0].column_letter
