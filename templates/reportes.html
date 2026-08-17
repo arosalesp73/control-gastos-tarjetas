@@ -97,8 +97,40 @@
         }
 
         async function enviarWhatsApp() {
-            // Reutiliza exactamente la misma lógica de descarga para que la app lo intercepte y comparta el archivo
-            await descargarReporte();
+            const tarjeta = document.getElementById('tarjeta').value;
+            const inicio = document.getElementById('fecha_inicio').value;
+            const fin = document.getElementById('fecha_fin').value;
+
+            const url = `/reportes/excel?tarjeta=${encodeURIComponent(tarjeta)}&fecha_inicio=${inicio}&fecha_fin=${fin}`;
+            
+            try {
+                const res = await fetch(url);
+                if (!res.ok) {
+                    mostrarAviso("No hay registros en este periodo para enviar por WhatsApp.");
+                    return;
+                }
+
+                const blob = await res.blob();
+                const blobUrl = window.URL.createObjectURL(blob);
+                
+                const link = document.createElement('a');
+                link.href = blobUrl;
+                link.setAttribute('download', `Reporte_${tarjeta}_${inicio}_al_${fin}.xlsx`);
+                
+                document.body.appendChild(link);
+                link.click();
+                
+                document.body.removeChild(link);
+                window.URL.revokeObjectURL(blobUrl);
+
+                // Aviso flotante de éxito para que sepas que se descargó y se abrirá para compartir
+                setTimeout(() => {
+                    mostrarAviso("✅ Reporte listo. Selecciona WhatsApp para enviarlo.");
+                }, 1000);
+
+            } catch (error) {
+                mostrarAviso("Ocurrió un error al preparar el reporte para WhatsApp.");
+            }
         }
     </script>
 </body>
