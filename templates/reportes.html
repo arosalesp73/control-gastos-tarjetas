@@ -13,7 +13,7 @@
         select, input, button { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #444; background: #0f0f1a; color: white; box-sizing: border-box; }
         button { background: #6c63ff; border: none; font-weight: bold; cursor: pointer; margin-top: 10px; }
         
-        /* Botón verde para WhatsApp / Compartir archivo */
+        /* Botón verde para WhatsApp */
         .btn-whatsapp { background: #25D366; color: black; margin-top: 10px; font-weight: bold; }
         
         .back-link { display: block; text-align: center; margin-top: 20px; color: #aaa; text-decoration: none; font-size: 0.9em; background: #222; padding: 10px; border-radius: 8px; border: 1px solid #444; }
@@ -46,10 +46,9 @@
                 </div>
 
                 <button type="button" onclick="descargarReporte()">Descargar Reporte</button>
-                <button type="button" class="btn-whatsapp" onclick="enviarWhatsApp()">🚀 Enviar Reporte (WhatsApp)</button>
+                <button type="button" class="btn-whatsapp" onclick="enviarWhatsApp()">🚀 Enviar por WhatsApp</button>
             </form>
 
-            <!-- Enlace para regresar a la pantalla principal -->
             <a href="/" class="back-link">⬅ Regresar al Inicio</a>
         </div>
     </div>
@@ -60,55 +59,23 @@
         document.getElementById('fecha_inicio').value = primero;
         document.getElementById('fecha_fin').value = hoy;
 
-        function mostrarAviso(mensaje) {
-            const aviso = document.createElement("div");
-            aviso.innerHTML = mensaje;
-            aviso.style.cssText = "position:fixed; top:20px; left:50%; transform:translateX(-50%); background:#ff4c4c; color:white; padding:15px; border-radius:8px; z-index:9999; box-shadow: 0 4px 6px rgba(0,0,0,0.1); font-family:sans-serif; text-align:center;";
-            document.body.appendChild(aviso);
-            setTimeout(() => aviso.remove(), 3500);
-        }
-
         function descargarReporte() {
             const tarjeta = document.getElementById('tarjeta').value;
             const inicio = document.getElementById('fecha_inicio').value;
             const fin = document.getElementById('fecha_fin').value;
 
-            // Ruta directa para que la web o el WebView detecten la descarga del Excel
             window.location.href = `/reportes/excel?tarjeta=${encodeURIComponent(tarjeta)}&fecha_inicio=${inicio}&fecha_fin=${fin}`;
         }
 
-        async function enviarWhatsApp() {
+        function enviarWhatsApp() {
             const tarjeta = document.getElementById('tarjeta').value;
             const inicio = document.getElementById('fecha_inicio').value;
             const fin = document.getElementById('fecha_fin').value;
 
-            const url = `/reportes/excel?tarjeta=${encodeURIComponent(tarjeta)}&fecha_inicio=${inicio}&fecha_fin=${fin}`;
+            const texto = `📊 Reporte de Gastos\nTarjeta: ${tarjeta}\nDesde: ${inicio}\nHasta: ${fin}`;
+            const urlWhatsApp = `https://api.whatsapp.com/send?text=${encodeURIComponent(texto)}`;
             
-            try {
-                const res = await fetch(url);
-                if (!res.ok) {
-                    mostrarAviso("No hay registros en este periodo para enviar.");
-                    return;
-                }
-
-                // Si estás en la App de Android, descargamos el archivo mediante Blob para que tu Java lo intercepte 
-                // y abra el menú donde puedes elegir WhatsApp con el archivo adjunto.
-                const blob = await res.blob();
-                const blobUrl = window.URL.createObjectURL(blob);
-                
-                const link = document.createElement('a');
-                link.href = blobUrl;
-                link.setAttribute('download', `Reporte_${tarjeta}_${inicio}_al_${fin}.xlsx`);
-                
-                document.body.appendChild(link);
-                link.click();
-                
-                document.body.removeChild(link);
-                window.URL.revokeObjectURL(blobUrl);
-
-            } catch (error) {
-                mostrarAviso("Ocurrió un error al preparar el reporte.");
-            }
+            window.open(urlWhatsApp, '_blank');
         }
     </script>
 </body>
