@@ -45,7 +45,7 @@
                 </div>
 
                 <button type="button" onclick="descargarReporte()">Descargar Reporte</button>
-                <button type="button" class="btn-whatsapp" onclick="enviarWhatsApp()">🚀 Enviar por WhatsApp</button>
+                <button type="button" id="btnWhatsApp" class="btn-whatsapp" onclick="enviarWhatsApp()">🚀 Enviar por WhatsApp</button>
             </form>
 
             <a href="/" class="back-link">⬅ Regresar al Inicio</a>
@@ -58,6 +58,21 @@
         document.getElementById('fecha_inicio').value = primero;
         document.getElementById('fecha_fin').value = hoy;
 
+        // Detectar si estamos en un dispositivo móvil o en una PC
+        const esMovil = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+        window.onload = function() {
+            const btnWhatsapp = document.getElementById('btnWhatsApp');
+            if (!esMovil) {
+                // Si está en la web (PC), deshabilitamos el botón y cambiamos su estilo
+                btnWhatsapp.disabled = true;
+                btnWhatsapp.style.background = '#444';
+                btnWhatsapp.style.color = '#888';
+                btnWhatsapp.style.cursor = 'not-allowed';
+                btnWhatsapp.innerText = '🚫 WhatsApp solo disponible en App móvil';
+            }
+        };
+
         function descargarReporte() {
             const tarjeta = document.getElementById('tarjeta').value;
             const inicio = document.getElementById('fecha_inicio').value;
@@ -67,11 +82,15 @@
         }
 
         function enviarWhatsApp() {
+            if (!esMovil) {
+                alert("El envío directo por WhatsApp con archivo adjunto solo está disponible en la aplicación móvil.");
+                return;
+            }
+
             const tarjeta = document.getElementById('tarjeta').value;
             const inicio = document.getElementById('fecha_inicio').value;
             const fin = document.getElementById('fecha_fin').value;
             
-            // Aquí está el cambio de Claude con la marca accion=whatsapp
             window.location.href = `/reportes/excel?tarjeta=${encodeURIComponent(tarjeta)}&fecha_inicio=${inicio}&fecha_fin=${fin}&accion=whatsapp`;
         }
     </script>
