@@ -13,7 +13,6 @@
         select, input, button { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #444; background: #0f0f1a; color: white; box-sizing: border-box; }
         button { background: #6c63ff; border: none; font-weight: bold; cursor: pointer; margin-top: 10px; }
         
-        /* Botón verde para WhatsApp */
         .btn-whatsapp { background: #25D366; color: black; margin-top: 10px; font-weight: bold; }
         
         .back-link { display: block; text-align: center; margin-top: 20px; color: #aaa; text-decoration: none; font-size: 0.9em; background: #222; padding: 10px; border-radius: 8px; border: 1px solid #444; }
@@ -71,11 +70,9 @@
             const tarjeta = document.getElementById('tarjeta').value;
             const inicio = document.getElementById('fecha_inicio').value;
             const fin = document.getElementById('fecha_fin').value;
-
-            const texto = `📊 Reporte de Gastos\nTarjeta: ${tarjeta}\nDesde: ${inicio}\nHasta: ${fin}`;
-            const urlWhatsApp = `https://api.whatsapp.com/send?text=${encodeURIComponent(texto)}`;
             
-            window.open(urlWhatsApp, '_blank');
+            // Aquí está el cambio de Claude con la marca accion=whatsapp
+            window.location.href = `/reportes/excel?tarjeta=${encodeURIComponent(tarjeta)}&fecha_inicio=${inicio}&fecha_fin=${fin}&accion=whatsapp`;
         }
     </script>
 </body>
