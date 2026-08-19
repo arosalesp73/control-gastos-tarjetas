@@ -175,15 +175,49 @@ async def generar_excel(request: Request, tarjeta: str = "TODAS", fecha_inicio: 
     if fecha_fin: query = query.lte("fecha", fecha_fin)
     res = query.execute()
     
+    # Pantalla de aviso si no hay resultados en la consulta
     if not res.data: 
-        return Response(status_code=404)
+        return HTMLResponse(f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Sin registros</title>
+            <style>{DARK_CSS}</style>
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0;">
+            <div class="card" style="max-width: 400px; width: 90%; text-align: center;">
+                <h2 style="color: #ffcc00;">📊 Sin movimientos</h2>
+                <p style="color: #bbb;">No se encontraron registros para el periodo seleccionado.</p>
+                <a href="/reportes" style="display: block; margin-top: 20px; padding: 10px; background: var(--accent); color: white; text-decoration: none; border-radius: 5px;">Volver a Reportes</a>
+            </div>
+        </body>
+        </html>
+        """)
 
     df = pd.DataFrame(res.data)
     df["fecha"] = pd.to_datetime(df["fecha"], errors='coerce')
     df = df.dropna(subset=["fecha"]).sort_values(by="fecha", ascending=True)
     
+    # Pantalla de aviso si el dataframe queda vacío tras procesar
     if df.empty:
-        return Response(status_code=404)
+        return HTMLResponse(f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Sin registros</title>
+            <style>{DARK_CSS}</style>
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0;">
+            <div class="card" style="max-width: 400px; width: 90%; text-align: center;">
+                <h2 style="color: #ffcc00;">📊 Sin movimientos</h2>
+                <p style="color: #bbb;">No se encontraron registros válidos para el periodo seleccionado.</p>
+                <a href="/reportes" style="display: block; margin-top: 20px; padding: 10px; background: var(--accent); color: white; text-decoration: none; border-radius: 5px;">Volver a Reportes</a>
+            </div>
+        </body>
+        </html>
+        """)
     
     df["fecha_limpia"] = df["fecha"].dt.strftime('%Y-%m-%d')
     df_final = df[["fecha_limpia", "concepto", "monto", "tipo"]].copy()
@@ -218,8 +252,7 @@ async def generar_excel(request: Request, tarjeta: str = "TODAS", fecha_inicio: 
             "Access-Control-Expose-Headers": "Content-Disposition"
         }
     )
-        
-        
+
 @app.get("/admin/usuarios", response_class=HTMLResponse)
 async def panel_usuarios(request: Request):
     user = request.session.get("user")
