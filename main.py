@@ -122,6 +122,55 @@ async def instalar_admin():
     </html>
     """, status_code=403)
 
+@app.get("/registro-inicial", response_class=HTMLResponse)
+async def f_registro_inicial(request: Request, error: str = None):
+    check = supabase.table("usuarios").select("id").execute()
+    if len(check.data) > 0:
+        return RedirectResponse("/login", status_code=303)
+    
+    return HTMLResponse(f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Configuración Inicial</title>
+        <style>{DARK_CSS}</style>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body style="display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0;">
+        <div class="card" style="max-width: 400px; width: 90%;">
+            <h2 style="color: var(--accent); text-align: center; margin-top: 0;">🚀 Configuración Inicial</h2>
+            <p style="color: #bbb; text-align: center; font-size: 0.9em; margin-bottom: 20px;">Crea tu cuenta de administrador para comenzar a usar el sistema.</p>
+            {f'<div class="error-msg">{error}</div>' if error else ''}
+            <form action="/registro-inicial" method="post">
+                <label>Usuario:</label>
+                <input type="text" name="username" required autocomplete="off">
+                
+                <label>Contraseña:</label>
+                <input type="password" name="password" required>
+                
+                <button type="submit">Crear Cuenta</button>
+            </form>
+        </div>
+    </body>
+    </html>
+    """)
+
+@app.post("/registro-inicial")
+async def g_registro_inicial(username: str = Form(...), password: str = Form(...)):
+    check = supabase.table("usuarios").select("id").execute()
+    if len(check.data) > 0:
+        return RedirectResponse("/login", status_code=303)
+    
+    password_hash = generar_hash(password)
+    supabase.table("usuarios").insert({
+        "username": username,
+        "password": password_hash,
+        "role": "admin",
+        "tipo_acceso": "basico"
+    }).execute()
+    
+    return RedirectResponse("/login", status_code=303)
+
 @app.get("/", response_class=HTMLResponse)
 async def inicio(request: Request):
     user = request.session.get("user")
