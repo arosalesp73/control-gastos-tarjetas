@@ -485,5 +485,27 @@ async def actualizar_mov(request: Request, id: int = Form(...), concepto: str = 
         "fecha": fecha, 
         "tipo": tipo_movimiento
     }).eq("id", id).eq("usuario_id", user["id"]).execute()
-    
+
     return RedirectResponse(f"/movimientos/nuevo/{tarjeta}", status_code=303)
+
+@app.get("/registro", response_class=HTMLResponse)
+async def registro_usuario_ui(request: Request, error: str = None):
+    if request.session.get("user"): 
+        return RedirectResponse("/")
+    return templates.TemplateResponse("registro_usuario.html", {"request": request, "css": DARK_CSS, "error": error})
+
+@app.post("/registro")
+async def registro_usuario_guardar(username: str = Form(...), password: str = Form(...)):
+    check = supabase.table("usuarios").select("id").eq("username", username).execute()
+    if check.data:
+        return RedirectResponse("/registro?error=El+nombre+de+usuario+ya+está+ocupado", status_code=303)
+    
+    password_hash = generar_hash(password)
+    supabase.table("usuarios").insert({
+        "username": username,
+        "password": password_hash,
+        "role": "usuario",
+        "tipo_acceso": "basico"
+    }).execute()
+    
+    return RedirectResponse("/login?error=Cuenta+creada+exitosamente.+Inicia+sesión", status_code=303)
