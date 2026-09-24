@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro - Control de Gastos</title>
+    <style>
+        {{ css | safe }}
+        .container { max-width: 400px; margin: 100px auto; padding: 20px; }
+        .main-title { text-align: center; color: var(--text); margin-bottom: 5px; font-size: 1.2em; opacity: 0.8; }
+        h2 { text-align: center; color: var(--accent); margin-top: 0; }
+        .link-login { text-align: center; margin-top: 15px; }
+        .link-login a { color: var(--accent); text-decoration: none; font-size: 0.9em; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="main-title">Registro de Gastos y Abonos en TDC</div>
+        <div class="card">
+            <h2>Crear Cuenta</h2>
+
+            {% if error %}
+                <div class="error-msg">
+                    {{ error }}
+                </div>
+            {% endif %}
+
+            <form action="/registro" method="post">
+                <label>Usuario:</label>
+                <input type="text" name="username" required placeholder="Elige un usuario" autocomplete="off">
+                
+                <label>Contraseña:</label>
+                <input type="password" name="password" required placeholder="••••••••">
+                
+                <button type="submit">Registrarse</button>
+            </form>
+
+            <div class="link-login">
+                <a href="/login">¿Ya tienes cuenta? Inicia sesión</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
