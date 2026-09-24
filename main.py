@@ -7,6 +7,7 @@ import time
 import urllib.parse
 import hashlib
 import secrets
+from datetime import datetime, timedelta
 from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime
 from fastapi import FastAPI, Form, Request, HTTPException, Response
@@ -495,17 +496,52 @@ async def registro_usuario_ui(request: Request, error: str = None):
     return templates.TemplateResponse("registro_usuario.html", {"request": request, "css": DARK_CSS, "error": error})
 
 @app.post("/registro")
-async def registro_usuario_guardar(username: str = Form(...), password: str = Form(...)):
+async def registro_usuario_guardar(username: str = Form(...), password: str = Form(...), codigo_invitacion: str = Form(...)):
+    # 1. Validar si el código de invitación existe en la tabla correcta
+    val_codigo = supabase.table("codigos_invitacion").select("*").eq("codigo", codigo_invitacion).execute()
+    
+    if not val_codigo.data:
+        return RedirectResponse("/registro?error=El+codigo+de+invitacion+no+existe", status_code=303)
+    
+    codigo_info = val_codigo.data[0]
+    if codigo_info["usado"]:
+        return RedirectResponse("/registro?error=Este+codigo+ya+fue+utilizado+anteriormente", status_code=303)
+
+    # 2. Verificar si el usuario ya existe
     check = supabase.table("usuarios").select("id").eq("username", username).execute()
     if check.data:
         return RedirectResponse("/registro?error=El+nombre+de+usuario+ya+está+ocupado", status_code=303)
     
+    # 3. Calcular fecha de expiración a 1 año exacto
+    fecha_expiracion = (datetime.now() + timedelta(days=365)).isoformat()
+    
+    # 4. Crear el usuario con su vigencia
     password_hash = generar_hash(password)
     supabase.table("usuarios").insert({
         "username": username,
         "password": password_hash,
         "role": "usuario",
-        "tipo_acceso": "basico"
+        "tipo_acceso": "basico",
+        "fecha_expiracion": fecha_expiracion
     }).execute()
     
+    # 5. Marcar el código de invitación como usado
+    supabase.table("codigos_invitacion").update({"usado": True}).eq("id", codigo_info["id"]).execute()
+    
     return RedirectResponse("/login?error=Cuenta+creada+exitosamente.+Inicia+sesión", status_code=303)
+
+@app.post("/admin/codigos/generar")
+async def generar_codigo_invitacion(request: Request):
+    user = request.session.get("user")
+    if not user or user.get("role") != 'admin':
+        return RedirectResponse("/login", status_code=303)
+    
+    # Generar un código único legible, por ejemplo: TDC-A8F2K9
+    nuevo_codigo = f"TDC-{secrets.token_hex(3).upper()}"
+    
+    supabase.table("codigos_invitacion").insert({
+        "codigo": nuevo_codigo,
+        "usado": False
+    }).execute()
+    
+    return RedirectResponse("/admin/usuarios", status_code=303)
