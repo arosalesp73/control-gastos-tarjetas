@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestión de Usuarios</title>
+    <title>Gestión de Usuarios y Códigos</title>
     <style>{{ css | safe }}</style>
 </head>
 <body>
@@ -11,20 +11,59 @@
         <a href="/" style="color: var(--accent); text-decoration: none; font-weight: bold;">← Volver</a>
     </nav>
 
-    <div style="padding: 20px;">
+    <div style="padding: 20px; max-width: 900px; margin: auto;">
+        
+        <!-- SECCIÓN: GENERAR CÓDIGOS DE INVITACIÓN -->
+        <div class="card" style="margin-bottom: 30px; text-align: center;">
+            <h3 style="margin-top: 0;">🎟️ Códigos de Invitación</h3>
+            <p style="color: #bbb; font-size: 0.9em;">Genera un nuevo código único para que un usuario pueda registrarse.</p>
+            <form action="/admin/codigos/generar" method="post" style="margin: 0;">
+                <button type="submit" style="max-width: 250px; margin: auto;">Generar Nuevo Código</button>
+            </form>
+            
+            {% if lista_codigos and lista_codigos|length > 0 %}
+            <div style="margin-top: 20px; text-align: left; max-height: 150px; overflow-y: auto; border: 1px solid #333; padding: 10px; border-radius: 5px;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.9em;">
+                    <thead>
+                        <tr style="border-bottom: 1px solid #444; color: var(--accent);">
+                            <th style="padding: 5px; text-align: left;">Código</th>
+                            <th style="padding: 5px; text-align: center;">Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for c in lista_codigos %}
+                        <tr style="border-bottom: 1px solid #222;">
+                            <td style="padding: 5px; font-family: monospace;">{{ c.codigo }}</td>
+                            <td style="padding: 5px; text-align: center;">
+                                {% if c.usado %}
+                                    <span style="color: #ff5555;">Usado</span>
+                                {% else %}
+                                    <span style="color: #4ecca3;">Disponible</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- SECCIÓN: CREAR USUARIO DIRECTO -->
         <div class="card" style="margin-bottom: 30px;">
-            <h3 style="margin-top: 0;">➕ Crear Nuevo Usuario</h3>
+            <h3 style="margin-top: 0;">➕ Crear Nuevo Usuario Directo</h3>
             <form action="/admin/crear_usuario" method="post" style="display: grid; gap: 10px;">
-                <input name="nuevo_username" placeholder="Usuario" required>
+                <input name="nuevo_username" placeholder="Usuario" required autocomplete="off">
                 <input name="nuevo_password" type="password" placeholder="Contraseña" required>
                 <select name="nuevo_role">
-                    <option value="user">Usuario Estándar</option>
+                    <option value="usuario">Usuario Estándar</option>
                     <option value="admin">Administrador</option>
                 </select>
                 <button type="submit">Registrar Usuario</button>
             </form>
         </div>
 
+        <!-- SECCIÓN: LISTA DE USUARIOS -->
         <h3>Usuarios Existentes</h3>
         <div style="display: grid; gap: 15px;">
             {% for u in lista_usuarios %}
@@ -32,6 +71,9 @@
                 <div>
                     <strong style="font-size: 1.1em;">{{ u.username }}</strong><br>
                     <span style="color: #888; font-size: 0.8em;">Rol: {{ u.role }}</span>
+                    {% if u.fecha_expiracion %}
+                        <br><span style="color: #4ecca3; font-size: 0.75em;">Expira: {{ u.fecha_expiracion[:10] }}</span>
+                    {% endif %}
                 </div>
                 <div style="display: flex; gap: 10px; align-items: center;">
                     <a href="/admin/usuarios/editar/{{ u.id }}" style="text-decoration: none;">✏️</a>
