@@ -190,6 +190,12 @@ async def login(request: Request, username: str = Form(...), password: str = For
     if res.data:
         usuario = res.data[0]
         if verificar_password(password, usuario["password"]):
+            # Validar si tiene fecha de expiración y si ya venció (excepto admins)
+            if usuario.get("role") != "admin" and usuario.get("fecha_expiracion"):
+                exp_date = datetime.fromisoformat(usuario["fecha_expiracion"])
+                if datetime.now() > exp_date:
+                    return RedirectResponse("/login?error=Tu+cuenta+ha+expirado", status_code=303)
+
             request.session.clear()
             request.session["user"] = usuario
             return RedirectResponse("/", status_code=303)
@@ -321,8 +327,19 @@ async def panel_usuarios(request: Request):
         </body>
         </html>
         """, status_code=403)
-    res = supabase.table("usuarios").select("*").execute()
-    return templates.TemplateResponse("usuarios.html", {"request": request, "user": user, "lista_usuarios": res.data, "css": DARK_CSS})
+    
+    # 1. Consultar tanto usuarios como códigos de invitación en Supabase
+    res_usuarios = supabase.table("usuarios").select("*").execute()
+    res_codigos = supabase.table("codigos_invitacion").select("*").execute()
+    
+    # 2. Pasar ambas listas al template de usuarios.html
+    return templates.TemplateResponse("usuarios.html", {
+        "request": request, 
+        "user": user, 
+        "lista_usuarios": res_usuarios.data, 
+        "lista_codigos": res_codigos.data,
+        "css": DARK_CSS
+    })
 
 @app.post("/admin/crear_usuario")
 async def c_usuario(request: Request, nuevo_username: str = Form(...), nuevo_password: str = Form(...), nuevo_role: str = Form(...)):
