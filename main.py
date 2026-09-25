@@ -547,7 +547,7 @@ async def registro_usuario_guardar(username: str = Form(...), password: str = Fo
     
     return RedirectResponse("/login?error=Cuenta+creada+exitosamente.+Inicia+sesión", status_code=303)
 
-@app.get("/admin/codigos/generar")
+@app.api_route("/admin/codigos/generar", methods=["GET", "POST"])
 async def generar_codigo_invitacion(request: Request):
     user = request.session.get("user")
     if not user or user.get("role") != 'admin':
