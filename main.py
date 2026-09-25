@@ -547,13 +547,12 @@ async def registro_usuario_guardar(username: str = Form(...), password: str = Fo
     
     return RedirectResponse("/login?error=Cuenta+creada+exitosamente.+Inicia+sesión", status_code=303)
 
-@app.post("/admin/codigos/generar")
+@app.get("/admin/codigos/generar")
 async def generar_codigo_invitacion(request: Request):
     user = request.session.get("user")
     if not user or user.get("role") != 'admin':
         return RedirectResponse("/login", status_code=303)
     
-    # Generar un código único legible, por ejemplo: TDC-A8F2K9
     nuevo_codigo = f"TDC-{secrets.token_hex(3).upper()}"
     
     supabase.table("codigos_invitacion").insert({
