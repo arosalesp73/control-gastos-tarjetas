@@ -192,7 +192,7 @@ async def login(request: Request, username: str = Form(...), password: str = For
         if verificar_password(password, usuario["password"]):
             # Validar si tiene fecha de expiración y si ya venció (excepto admins)
             if usuario.get("role") != "admin" and usuario.get("fecha_expiracion"):
-                exp_date = datetime.fromisoformat(usuario["fecha_expiracion"])
+                exp_date = datetime.strptime(usuario["fecha_expiracion"].split(".")[0], "%Y-%m-%dT%H:%M:%S")
                 if datetime.now() > exp_date:
                     return RedirectResponse("/login?error=Tu+cuenta+ha+expirado", status_code=303)
 
