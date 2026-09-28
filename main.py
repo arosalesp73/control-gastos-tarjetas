@@ -193,9 +193,35 @@ async def login(request: Request, username: str = Form(...), password: str = For
             # Validar si tiene fecha de expiración y si ya venció (excepto admins)
             if usuario.get("role") != "admin" and usuario.get("fecha_expiracion"):
                 exp_date = datetime.fromisoformat(usuario["fecha_expiracion"].replace("Z", "+00:00").split("+")[0])
-                if datetime.now() > exp_date:
-                    return RedirectResponse("/login?error=Tu+cuenta+ha+expirado", status_code=303)
-
+            if datetime.now() > exp_date:
+                return HTMLResponse(f"""
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Cuenta Expirada</title>
+                    <style>{DARK_CSS}</style>
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                </head>
+                <body style="display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0;">
+                    <div class="card" style="max-width: 420px; width: 90%; text-align: center;">
+                        <h2 style="color: #ff5555; margin-top: 0;">⚠️ Tu cuenta ha expirado</h2>
+                        <p style="color: #bbb; font-size: 0.95em; line-height: 1.5; margin-bottom: 20px;">
+                            Tu licencia de 1 año ha vencido. Puedes descargar un respaldo en Excel con todas tus tarjetas y movimientos antes de renovar tu acceso.
+                        </p>
+                        <form action="/respaldo-datos" method="post" style="text-align: left;">
+                            <label>Confirma tu Usuario:</label>
+                            <input type="text" name="username" value="{username}" required autocomplete="off">
+                            
+                            <label>Confirma tu Contraseña:</label>
+                            <input type="password" name="password" required>
+                            
+                            <button type="submit" style="margin-top: 10px;">📥 Descargar Respaldo (Excel)</button>
+                        </form>
+                        <a href="/login" style="display: block; margin-top: 20px; color: var(--accent); text-decoration: none; font-size: 0.9em;">← Volver al Login</a>
+                    </div>
+                </body>
+                </html>
+                """)
             request.session.clear()
             request.session["user"] = usuario
             return RedirectResponse("/", status_code=303)
