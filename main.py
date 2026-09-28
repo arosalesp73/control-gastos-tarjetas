@@ -561,3 +561,44 @@ async def generar_codigo_invitacion(request: Request):
     }).execute()
     
     return RedirectResponse("/admin/usuarios", status_code=303)
+
+@app.post("/respaldo-datos")
+async def descargar_respaldo(username: str = Form(...), password: str = Form(...)):
+    # Validar credenciales aunque la cuenta esté vencida
+    res = supabase.table("usuarios").select("*").eq("username", username).execute()
+    if not res.data or not verificar_password(password, res.data[0]["password"]):
+        return HTMLResponse("<h1>Credenciales incorrectas. <a href='/login'>Volver al Login</a></h1>", status_code=403)
+    
+    usuario = res.data[0]
+    
+    # Consultar tarjetas y movimientos de este usuario
+    res_tarjetas = supabase.table("tarjetas").select("*").eq("usuario_id", usuario["id"]).execute()
+    res_movimientos = supabase.table("movimientos").select("*").eq("usuario_id", usuario["id"]).execute()
+    
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        # Pestaña de Tarjetas
+        if res_tarjetas.data:
+            df_tarjetas = pd.DataFrame(res_tarjetas.data)
+            df_tarjetas.to_excel(writer, index=False, sheet_name='Mis Tarjetas')
+        else:
+            pd.DataFrame(columns=["nombre_tarjeta", "dia_corte", "dia_pago"]).to_excel(writer, index=False, sheet_name='Mis Tarjetas')
+            
+        # Pestaña de Movimientos
+        if res_movimientos.data:
+            df_movs = pd.DataFrame(res_movimientos.data)
+            df_movs.to_excel(writer, index=False, sheet_name='Mis Movimientos')
+        else:
+            pd.DataFrame(columns=["tarjeta", "concepto", "monto", "fecha", "tipo"]).to_excel(writer, index=False, sheet_name='Mis Movimientos')
+            
+    output.seek(0)
+    nombre_archivo = f"Respaldo_{usuario['username']}.xlsx"
+    
+    return StreamingResponse(
+        output, 
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={
+            "Content-Disposition": f"attachment; filename={nombre_archivo}",
+            "Access-Control-Expose-Headers": "Content-Disposition"
+        }
+    )
