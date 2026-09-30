@@ -9,12 +9,12 @@ import hashlib
 import secrets
 from datetime import datetime, timedelta
 from fastapi.middleware.cors import CORSMiddleware
-from datetime import datetime
 from fastapi import FastAPI, Form, Request, HTTPException, Response
 from fastapi.responses import HTMLResponse, StreamingResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
 from supabase import create_client, Client
+import stripe
 
 app = FastAPI()
 
@@ -28,6 +28,9 @@ app.add_middleware(
 
 # --- CONFIGURACIÓN DE SESIONES ---
 app.add_middleware(SessionMiddleware, secret_key=os.environ.get("SESSION_SECRET", "12345"))
+
+# --- CONFIGURACIÓN DE STRIPE ---
+stripe.api_key = os.environ.get("STRIPE_SECRET_KEY", "tu_api_key_de_stripe")
 
 # --- FUNCIONES DE CONTRASEÑA SEGURA (COMPATIBLES) ---
 def generar_hash(password: str) -> str:
@@ -95,10 +98,10 @@ async def instalar_admin():
             "password": password_hash, 
             "role": "admin"
         }).execute()
-        return HTMLResponse(f"""
+        return HTMLResponse("""
         <!DOCTYPE html>
         <html>
-        <head><title>Admin Creado</title><style>{DARK_CSS}</style><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+        <head><title>Admin Creado</title><style>""" + DARK_CSS + """</style><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
         <body style="display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0;">
             <div class="card" style="max-width: 400px; width: 90%; text-align: center;">
                 <h2 style="color: #4ecca3; margin-top: 0;">✨ ¡Admin Creado!</h2>
@@ -109,10 +112,10 @@ async def instalar_admin():
         </html>
         """)
     
-    return HTMLResponse(f"""
+    return HTMLResponse("""
     <!DOCTYPE html>
     <html>
-    <head><title>Acceso Denegado</title><style>{DARK_CSS}</style><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+    <head><title>Acceso Denegado</title><style>""" + DARK_CSS + """</style><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
     <body style="display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0;">
         <div class="card" style="max-width: 400px; width: 90%; text-align: center;">
             <h2 style="color: #ff5555; margin-top: 0;">⚠️ Acceso Denegado</h2>
@@ -129,6 +132,7 @@ async def f_registro_inicial(request: Request, error: str = None):
     if len(check.data) > 0:
         return RedirectResponse("/login", status_code=303)
     
+    error_html = f'<div class="error-msg">{error}</div>' if error else ''
     return HTMLResponse(f"""
     <!DOCTYPE html>
     <html>
@@ -141,7 +145,7 @@ async def f_registro_inicial(request: Request, error: str = None):
         <div class="card" style="max-width: 400px; width: 90%;">
             <h2 style="color: var(--accent); text-align: center; margin-top: 0;">🚀 Configuración Inicial</h2>
             <p style="color: #bbb; text-align: center; font-size: 0.9em; margin-bottom: 20px;">Crea tu cuenta de administrador para comenzar a usar el sistema.</p>
-            {f'<div class="error-msg">{error}</div>' if error else ''}
+            {error_html}
             <form action="/registro-inicial" method="post">
                 <label>Usuario:</label>
                 <input type="text" name="username" required autocomplete="off">
@@ -190,38 +194,37 @@ async def login(request: Request, username: str = Form(...), password: str = For
     if res.data:
         usuario = res.data[0]
         if verificar_password(password, usuario["password"]):
-            # Validar si tiene fecha de expiración y si ya venció (excepto admins)
             if usuario.get("role") != "admin" and usuario.get("fecha_expiracion"):
                 exp_date = datetime.fromisoformat(usuario["fecha_expiracion"].replace("Z", "+00:00").split("+")[0])
-            if datetime.now() > exp_date:
-                return HTMLResponse(f"""
-                <!DOCTYPE html>
-                <html>
-                <head>
-                    <title>Cuenta Expirada</title>
-                    <style>{DARK_CSS}</style>
-                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                </head>
-                <body style="display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0;">
-                    <div class="card" style="max-width: 420px; width: 90%; text-align: center;">
-                        <h2 style="color: #ff5555; margin-top: 0;">⚠️ Tu cuenta ha expirado</h2>
-                        <p style="color: #bbb; font-size: 0.95em; line-height: 1.5; margin-bottom: 20px;">
-                            Tu licencia de 1 año ha vencido. Puedes descargar un respaldo en Excel con todas tus tarjetas y movimientos antes de renovar tu acceso.
-                        </p>
-                        <form action="/respaldo-datos" method="post" style="text-align: left;">
-                            <label>Confirma tu Usuario:</label>
-                            <input type="text" name="username" value="{username}" required autocomplete="off">
-                            
-                            <label>Confirma tu Contraseña:</label>
-                            <input type="password" name="password" required>
-                            
-                            <button type="submit" style="margin-top: 10px;">📥 Descargar Respaldo (Excel)</button>
-                        </form>
-                        <a href="/login" style="display: block; margin-top: 20px; color: var(--accent); text-decoration: none; font-size: 0.9em;">← Volver al Login</a>
-                    </div>
-                </body>
-                </html>
-                """)
+                if datetime.now() > exp_date:
+                    return HTMLResponse(f"""
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <title>Cuenta Expirada</title>
+                        <style>{DARK_CSS}</style>
+                        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    </head>
+                    <body style="display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0;">
+                        <div class="card" style="max-width: 420px; width: 90%; text-align: center;">
+                            <h2 style="color: #ff5555; margin-top: 0;">⚠️ Tu cuenta ha expirado</h2>
+                            <p style="color: #bbb; font-size: 0.95em; line-height: 1.5; margin-bottom: 20px;">
+                                Tu licencia de 1 año ha vencido. Puedes descargar un respaldo en Excel con todas tus tarjetas y movimientos antes de renovar tu acceso.
+                            </p>
+                            <form action="/respaldo-datos" method="post" style="text-align: left;">
+                                <label>Confirma tu Usuario:</label>
+                                <input type="text" name="username" value="{username}" required autocomplete="off">
+                                
+                                <label>Confirma tu Contraseña:</label>
+                                <input type="password" name="password" required>
+                                
+                                <button type="submit" style="margin-top: 10px;">📥 Descargar Respaldo (Excel)</button>
+                            </form>
+                            <a href="/login" style="display: block; margin-top: 20px; color: var(--accent); text-decoration: none; font-size: 0.9em;">← Volver al Login</a>
+                        </div>
+                    </body>
+                    </html>
+                    """)
             request.session.clear()
             request.session["user"] = usuario
             return RedirectResponse("/", status_code=303)
@@ -257,7 +260,6 @@ async def generar_excel(request: Request, tarjeta: str = "TODAS", fecha_inicio: 
     if fecha_fin: query = query.lte("fecha", fecha_fin)
     res = query.execute()
     
-    # Pantalla de aviso si no hay resultados en la consulta
     if not res.data: 
         return HTMLResponse(f"""
         <!DOCTYPE html>
@@ -281,7 +283,6 @@ async def generar_excel(request: Request, tarjeta: str = "TODAS", fecha_inicio: 
     df["fecha"] = pd.to_datetime(df["fecha"], errors='coerce')
     df = df.dropna(subset=["fecha"]).sort_values(by="fecha", ascending=True)
     
-    # Pantalla de aviso si el dataframe queda vacío tras procesar
     if df.empty:
         return HTMLResponse(f"""
         <!DOCTYPE html>
@@ -354,11 +355,9 @@ async def panel_usuarios(request: Request):
         </html>
         """, status_code=403)
     
-    # 1. Consultar tanto usuarios como códigos de invitación en Supabase
     res_usuarios = supabase.table("usuarios").select("*").execute()
     res_codigos = supabase.table("codigos_invitacion").select("*").execute()
     
-    # 2. Pasar ambas listas al template de usuarios.html
     return templates.TemplateResponse("usuarios.html", {
         "request": request, 
         "user": user, 
@@ -540,7 +539,6 @@ async def registro_usuario_ui(request: Request, error: str = None):
 
 @app.post("/registro")
 async def registro_usuario_guardar(username: str = Form(...), password: str = Form(...), codigo_invitacion: str = Form(...)):
-    # 1. Validar si el código de invitación existe en la tabla correcta
     val_codigo = supabase.table("codigos_invitacion").select("*").eq("codigo", codigo_invitacion).execute()
     
     if not val_codigo.data:
@@ -550,15 +548,12 @@ async def registro_usuario_guardar(username: str = Form(...), password: str = Fo
     if codigo_info["usado"]:
         return RedirectResponse("/registro?error=Este+codigo+ya+fue+utilizado+anteriormente", status_code=303)
 
-    # 2. Verificar si el usuario ya existe
     check = supabase.table("usuarios").select("id").eq("username", username).execute()
     if check.data:
         return RedirectResponse("/registro?error=El+nombre+de+usuario+ya+está+ocupado", status_code=303)
     
-    # 3. Calcular fecha de expiración a 1 año exacto
     fecha_expiracion = (datetime.now() + timedelta(days=365)).isoformat()
     
-    # 4. Crear el usuario con su vigencia
     password_hash = generar_hash(password)
     supabase.table("usuarios").insert({
         "username": username,
@@ -568,7 +563,6 @@ async def registro_usuario_guardar(username: str = Form(...), password: str = Fo
         "fecha_expiracion": fecha_expiracion
     }).execute()
     
-    # 5. Marcar el código de invitación como usado
     supabase.table("codigos_invitacion").update({"usado": True}).eq("id", codigo_info["id"]).execute()
     
     return RedirectResponse("/login?error=Cuenta+creada+exitosamente.+Inicia+sesión", status_code=303)
@@ -590,27 +584,23 @@ async def generar_codigo_invitacion(request: Request):
 
 @app.post("/respaldo-datos")
 async def descargar_respaldo(username: str = Form(...), password: str = Form(...)):
-    # Validar credenciales aunque la cuenta esté vencida
     res = supabase.table("usuarios").select("*").eq("username", username).execute()
     if not res.data or not verificar_password(password, res.data[0]["password"]):
         return HTMLResponse("<h1>Credenciales incorrectas. <a href='/login'>Volver al Login</a></h1>", status_code=403)
     
     usuario = res.data[0]
     
-    # Consultar tarjetas y movimientos de este usuario
     res_tarjetas = supabase.table("tarjetas").select("*").eq("usuario_id", usuario["id"]).execute()
     res_movimientos = supabase.table("movimientos").select("*").eq("usuario_id", usuario["id"]).execute()
     
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        # Pestaña de Tarjetas
         if res_tarjetas.data:
             df_tarjetas = pd.DataFrame(res_tarjetas.data)
             df_tarjetas.to_excel(writer, index=False, sheet_name='Mis Tarjetas')
         else:
             pd.DataFrame(columns=["nombre_tarjeta", "dia_corte", "dia_pago"]).to_excel(writer, index=False, sheet_name='Mis Tarjetas')
             
-        # Pestaña de Movimientos
         if res_movimientos.data:
             df_movs = pd.DataFrame(res_movimientos.data)
             df_movs.to_excel(writer, index=False, sheet_name='Mis Movimientos')
@@ -628,3 +618,34 @@ async def descargar_respaldo(username: str = Form(...), password: str = Form(...
             "Access-Control-Expose-Headers": "Content-Disposition"
         }
     )
+
+@app.post("/crear-sesion-pago")
+async def crear_sesion_pago(request: Request):
+    user = request.session.get("user")
+    if not user:
+        return RedirectResponse("/login", status_code=303)
+    
+    try:
+        checkout_session = stripe.checkout.Session.create(
+            payment_method_types=["card"],
+            line_items=[{
+                "price_data": {
+                    "currency": "mxn",
+                    "unit_amount": 12000, 
+                    "product_data": {
+                        "name": "Renovación Anual - Sistema TDC",
+                    },
+                },
+                "quantity": 1,
+            }],
+            mode="payment",
+            success_url=str(request.base_url) + "pago-exitoso?session_id={CHECKOUT_SESSION_ID}",
+            cancel_url=str(request.base_url) + "login",
+            metadata={
+                "user_id": str(user["id"]),
+                "username": user["username"]
+            }
+        )
+        return RedirectResponse(checkout_session.url, status_code=303)
+    except Exception as e:
+        return HTMLResponse(f"<h1>Error al crear la sesión de pago: {str(e)}</h1>", status_code=400)
