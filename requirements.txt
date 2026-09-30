@@ -10,3 +10,4 @@ openpyxl
 apscheduler
 httpx
 passlib[bcrypt]
+stripe
