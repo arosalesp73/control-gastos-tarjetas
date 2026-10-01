@@ -220,6 +220,12 @@ async def login(request: Request, username: str = Form(...), password: str = For
                                 
                                 <button type="submit" style="margin-top: 10px;">📥 Descargar Respaldo (Excel)</button>
                             </form>
+                            
+                            <!-- Botón para iniciar el pago en Stripe -->
+                            <form action="/crear-sesion-pago" method="post" style="margin-top: 10px;">
+                                <button type="submit" style="background: #6c63ff; color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer; width: 100%;">💳 Renovar Licencia ($120 MXN)</button>
+                            </form>
+
                             <a href="/login" style="display: block; margin-top: 20px; color: var(--accent); text-decoration: none; font-size: 0.9em;">← Volver al Login</a>
                         </div>
                     </body>
