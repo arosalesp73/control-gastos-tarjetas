@@ -221,8 +221,9 @@ async def login(request: Request, username: str = Form(...), password: str = For
                                 <button type="submit" style="margin-top: 10px;">📥 Descargar Respaldo (Excel)</button>
                             </form>
                             
-                            <!-- Botón para iniciar el pago en Stripe -->
+                            <!-- Botón para iniciar el pago en Stripe enviando el usuario -->
                             <form action="/crear-sesion-pago" method="post" style="margin-top: 10px;">
+                                <input type="hidden" name="username" value="{username}">
                                 <button type="submit" style="background: #6c63ff; color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer; width: 100%;">💳 Renovar Licencia ($120 MXN)</button>
                             </form>
 
@@ -626,8 +627,14 @@ async def descargar_respaldo(username: str = Form(...), password: str = Form(...
     )
 
 @app.post("/crear-sesion-pago")
-async def crear_sesion_pago(request: Request):
+async def crear_sesion_pago(request: Request, username: str = Form(None)):
     user = request.session.get("user")
+    
+    if not user and username:
+        res = supabase.table("usuarios").select("*").eq("username", username).execute()
+        if res.data:
+            user = res.data[0]
+            
     if not user:
         return RedirectResponse("/login", status_code=303)
     
