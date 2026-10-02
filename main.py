@@ -201,41 +201,49 @@ async def login(request: Request, username: str = Form(...), password: str = For
                         <meta name="viewport" content="width=device-width, initial-scale=1.0">
                     </head>
                     <body style="display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0;">
-                        <div class="card" style="max-width: 420px; width: 90%; text-align: center;">
+                        <div class="card" style="max-width: 440px; width: 90%; text-align: center;">
                             <h2 style="color: #ff5555; margin-top: 0;">⚠️ Tu cuenta ha expirado</h2>
-                            <p style="color: #bbb; font-size: 0.95em; line-height: 1.5; margin-bottom: 20px;">
-                                Tu licencia de 1 año ha vencido. Puedes descargar un respaldo en Excel con todas tus tarjetas y movimientos, y realizar tu renovación.
+                            <p style="color: #bbb; font-size: 0.9em; line-height: 1.4; margin-bottom: 12px;">
+                                Tu licencia ha vencido. Descarga tu respaldo en Excel o realiza tu pago y envíanos el comprobante.
                             </p>
                             <form action="/respaldo-datos" method="post" style="text-align: left;">
-                                <label>Confirma tu Usuario:</label>
+                                <label style="font-size: 0.85em;">Confirma tu Usuario:</label>
                                 <input type="text" name="username" value="{username}" required autocomplete="off">
                                 
-                                <label>Confirma tu Contraseña:</label>
+                                <label style="font-size: 0.85em;">Confirma tu Contraseña:</label>
                                 <input type="password" name="password" required>
                                 
-                                <button type="submit" style="margin-top: 10px;">📥 Descargar Respaldo (Excel)</button>
+                                <button type="submit" style="margin-top: 4px;">📥 Descargar Respaldo (Excel)</button>
                             </form>
                             
-                            <div style="margin-top: 20px; padding: 14px; background: rgba(108,99,255,0.08); border-radius: 8px; border: 1px solid var(--accent); text-align: left;">
-                                <p style="margin: 0 0 10px 0; font-size: 0.9em; color: #fff; font-weight: bold; text-align: center;">💳 Datos para Renovación:</p>
+                            <div style="margin-top: 12px; padding: 10px; background: rgba(108,99,255,0.08); border-radius: 8px; border: 1px solid var(--accent); text-align: left;">
+                                <p style="margin: 0 0 4px 0; font-size: 0.85em; color: #fff; font-weight: bold; text-align: center;">💳 Precios de Renovación:</p>
+                                <ul style="margin: 0 0 8px 0; padding-left: 16px; font-size: 0.8em; color: #ccc; line-height: 1.3;">
+                                    <li><b>1 Año:</b> $120 MXN</li>
+                                    <li><b>2 Años:</b> $200 MXN <span style="color: #4ecca3;">(Oferta)</span></li>
+                                    <li><b>3 Años:</b> $300 MXN <span style="color: #4ecca3;">(Ahorro)</span></li>
+                                </ul>
                                 
+                                <div style="display: flex; align-items: center; margin-bottom: 4px;">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4ecca3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px; flex-shrink: 0;"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>
+                                    <span style="font-size: 0.8em; color: #ddd;"><b>Banco:</b> BBVA</span>
+                                </div>
+
                                 <div style="display: flex; align-items: center; margin-bottom: 8px;">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4ecca3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px; flex-shrink: 0;"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>
-                                    <span style="font-size: 0.85em; color: #ddd;"><b>Banco:</b> BBVA</span>
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4ecca3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px; flex-shrink: 0;"><rect x="2" y="5" width="20" height="14" rx="2"></rect><line x1="2" y1="10" x2="22" y2="10"></line></svg>
+                                    <span style="font-size: 0.8em; color: #ddd; word-break: break-all;"><b>CLABE:</b> <span style="color: #4ecca3; font-family: monospace; font-size: 1.1em; font-weight: bold; letter-spacing: 0.5px;">012180015723536440</span></span>
                                 </div>
 
-                                <div style="display: flex; align-items: center; margin-bottom: 12px;">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4ecca3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px; flex-shrink: 0;"><rect x="2" y="5" width="20" height="14" rx="2"></rect><line x1="2" y1="10" x2="22" y2="10"></line></svg>
-                                    <span style="font-size: 0.85em; color: #ddd; word-break: break-all;"><b>CLABE:</b> <span style="color: #4ecca3; font-family: monospace; font-size: 1.25em; font-weight: bold; letter-spacing: 0.5px;">012180015723536440</span></span>
-                                </div>
-
-                                <div style="display: flex; align-items: center; justify-content: center; background: rgba(37,211,102,0.1); padding: 8px; border-radius: 6px; border: 1px solid rgba(37,211,102,0.3);">
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="#25D366" style="margin-right: 6px; flex-shrink: 0;"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.198-.198.347-.764.967-.937 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.124-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/></svg>
-                                    <a href="https://wa.me/523121073276" target="_blank" style="color: #25D366; font-weight: bold; text-decoration: none; font-size: 0.9em;">WhatsApp: 312 107 3276</a>
+                                <div style="background: rgba(37,211,102,0.1); padding: 8px; border-radius: 6px; border: 1px solid rgba(37,211,102,0.3); text-align: center;">
+                                    <p style="margin: 0 0 4px 0; font-size: 0.78em; color: #ddd;">Realiza tu depósito y envía tu comprobante indicando tu usuario:</p>
+                                    <div style="display: flex; align-items: center; justify-content: center;">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="#25D366" style="margin-right: 6px; flex-shrink: 0;"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.198-.198.347-.764.967-.937 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.124-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/></svg>
+                                        <a href="https://wa.me/523121073276" target="_blank" style="color: #25D366; font-weight: bold; text-decoration: none; font-size: 0.85em;">WhatsApp: 312 107 3276</a>
+                                    </div>
                                 </div>
                             </div>
 
-                            <a href="/login" style="display: block; margin-top: 20px; color: var(--accent); text-decoration: none; font-size: 0.9em;">← Volver al Login</a>
+                            <a href="/login" style="display: block; margin-top: 12px; color: var(--accent); text-decoration: none; font-size: 0.85em;">← Volver al Login</a>
                         </div>
                     </body>
                     </html>
