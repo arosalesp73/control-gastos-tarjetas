@@ -226,7 +226,7 @@ async def login(request: Request, username: str = Form(...), password: str = For
 
                                 <div style="display: flex; align-items: center; margin-bottom: 12px;">
                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4ecca3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px; flex-shrink: 0;"><rect x="2" y="5" width="20" height="14" rx="2"></rect><line x1="2" y1="10" x2="22" y2="10"></line></svg>
-                                    <span style="font-size: 0.85em; color: #ddd; word-break: break-all;"><b>CLABE:</b> <span style="color: #4ecca3; font-family: monospace; font-size: 1em;">012180015723536440</span></span>
+                                    <span style="font-size: 0.85em; color: #ddd; word-break: break-all;"><b>CLABE:</b> <span style="color: #4ecca3; font-family: monospace; font-size: 1.25em; font-weight: bold; letter-spacing: 0.5px;">012180015723536440</span></span>
                                 </div>
 
                                 <div style="display: flex; align-items: center; justify-content: center; background: rgba(37,211,102,0.1); padding: 8px; border-radius: 6px; border: 1px solid rgba(37,211,102,0.3);">
@@ -362,7 +362,7 @@ async def panel_usuarios(request: Request):
         <head><title>Acceso Denegado</title><style>{DARK_CSS}</style><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
         <body style="display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0;">
             <div class="card" style="max-width: 400px; width: 90%; text-align: center;">
-                <h2 style="color: #ff5555; margin-top: 0;">⚠️️ Acceso Denegado</h2>
+                <h2 style="color: #ff5555; margin-top: 0;">⚠️ Acceso Denegado</h2>
                 <p style="color: #bbb; font-size: 0.95em;">No tienes los privilegios de administrador necesarios para ver esta sección.</p>
                 <a href="/" style="display: block; margin-top: 20px; padding: 10px; background: var(--accent); color: white; text-decoration: none; border-radius: 5px;">Volver al Inicio</a>
             </div>
@@ -380,6 +380,30 @@ async def panel_usuarios(request: Request):
         "lista_codigos": res_codigos.data,
         "css": DARK_CSS
     })
+
+@app.post("/admin/usuarios/renovar")
+async def admin_renovar_licencia(request: Request, id: int = Form(...), anios: int = Form(...)):
+    user = request.session.get("user")
+    if not user or user.get("role") != 'admin':
+        return RedirectResponse("/login", status_code=303)
+    
+    res = supabase.table("usuarios").select("fecha_expiracion").eq("id", id).execute()
+    if res.data:
+        u_info = res.data[0]
+        base_date = datetime.now()
+        current_exp = u_info.get("fecha_expiracion")
+        if current_exp:
+            try:
+                exp_dt = datetime.fromisoformat(current_exp.replace("Z", "+00:00").split("+")[0])
+                if exp_dt > base_date:
+                    base_date = exp_dt
+            except:
+                pass
+        
+        nueva_exp = (base_date + timedelta(days=365 * anios)).isoformat()
+        supabase.table("usuarios").update({"fecha_expiracion": nueva_exp}).eq("id", id).execute()
+        
+    return RedirectResponse("/admin/usuarios", status_code=303)
 
 @app.post("/admin/crear_usuario")
 async def c_usuario(request: Request, nuevo_username: str = Form(...), nuevo_password: str = Form(...), nuevo_role: str = Form(...)):
