@@ -3,7 +3,6 @@ import os
 import pandas as pd
 import httpx
 import threading
-import time
 import urllib.parse
 import hashlib
 import secrets
@@ -14,7 +13,6 @@ from fastapi.responses import HTMLResponse, StreamingResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
 from supabase import create_client, Client
-import stripe
 
 app = FastAPI()
 
@@ -28,9 +26,6 @@ app.add_middleware(
 
 # --- CONFIGURACIÓN DE SESIONES ---
 app.add_middleware(SessionMiddleware, secret_key=os.environ.get("SESSION_SECRET", "12345"))
-
-# --- CONFIGURACIÓN DE STRIPE ---
-stripe.api_key = os.environ.get("STRIPE_SECRET_KEY", "tu_api_key_de_stripe")
 
 # --- FUNCIONES DE CONTRASEÑA SEGURA (COMPATIBLES) ---
 def generar_hash(password: str) -> str:
@@ -209,7 +204,7 @@ async def login(request: Request, username: str = Form(...), password: str = For
                         <div class="card" style="max-width: 420px; width: 90%; text-align: center;">
                             <h2 style="color: #ff5555; margin-top: 0;">⚠️ Tu cuenta ha expirado</h2>
                             <p style="color: #bbb; font-size: 0.95em; line-height: 1.5; margin-bottom: 20px;">
-                                Tu licencia de 1 año ha vencido. Puedes descargar un respaldo en Excel con todas tus tarjetas y movimientos antes de renovar tu acceso.
+                                Tu licencia de 1 año ha vencido. Puedes descargar un respaldo en Excel con todas tus tarjetas y movimientos, y contactar al administrador para renovar tu acceso.
                             </p>
                             <form action="/respaldo-datos" method="post" style="text-align: left;">
                                 <label>Confirma tu Usuario:</label>
@@ -221,11 +216,9 @@ async def login(request: Request, username: str = Form(...), password: str = For
                                 <button type="submit" style="margin-top: 10px;">📥 Descargar Respaldo (Excel)</button>
                             </form>
                             
-                            <!-- Botón para iniciar el pago en Stripe enviando el usuario -->
-                            <form action="/crear-sesion-pago" method="post" style="margin-top: 10px;">
-                                <input type="hidden" name="username" value="{username}">
-                                <button type="submit" style="background: #6c63ff; color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer; width: 100%;">💳 Renovar Licencia ($120 MXN)</button>
-                            </form>
+                            <div style="margin-top: 20px; padding: 12px; background: rgba(108,99,255,0.1); border-radius: 5px; border: 1px solid var(--accent);">
+                                <p style="margin: 0; font-size: 0.9em; color: #ddd;">Para renovar tu licencia, comunícate con soporte o realiza tu pago por transferencia y envía tu comprobante.</p>
+                            </div>
 
                             <a href="/login" style="display: block; margin-top: 20px; color: var(--accent); text-decoration: none; font-size: 0.9em;">← Volver al Login</a>
                         </div>
@@ -625,40 +618,3 @@ async def descargar_respaldo(username: str = Form(...), password: str = Form(...
             "Access-Control-Expose-Headers": "Content-Disposition"
         }
     )
-
-@app.post("/crear-sesion-pago")
-async def crear_sesion_pago(request: Request, username: str = Form(None)):
-    user = request.session.get("user")
-    
-    if not user and username:
-        res = supabase.table("usuarios").select("*").eq("username", username).execute()
-        if res.data:
-            user = res.data[0]
-            
-    if not user:
-        return RedirectResponse("/login", status_code=303)
-    
-    try:
-        checkout_session = stripe.checkout.Session.create(
-            payment_method_types=["card"],
-            line_items=[{
-                "price_data": {
-                    "currency": "mxn",
-                    "unit_amount": 12000, 
-                    "product_data": {
-                        "name": "Renovación Anual - Sistema TDC",
-                    },
-                },
-                "quantity": 1,
-            }],
-            mode="payment",
-            success_url=str(request.base_url) + "pago-exitoso?session_id={CHECKOUT_SESSION_ID}",
-            cancel_url=str(request.base_url) + "login",
-            metadata={
-                "user_id": str(user["id"]),
-                "username": user["username"]
-            }
-        )
-        return RedirectResponse(checkout_session.url, status_code=303)
-    except Exception as e:
-        return HTMLResponse(f"<h1>Error al crear la sesión de pago: {str(e)}</h1>", status_code=400)
