@@ -381,10 +381,11 @@ async def panel_usuarios(request: Request):
     res_usuarios = supabase.table("usuarios").select("*").execute()
     res_codigos = supabase.table("codigos_invitacion").select("*").execute()
     
-    # Generar HTML directamente para incluir los botones de renovación por usuario
     usuarios_html = ""
     for u in res_usuarios.data:
-        exp_info = f"<span style='color: #4ecca3; font-size: 0.85em;'>Expira: {u.get('fecha_expiracion', 'N/A')[:10]}</span>" if u.get('role') != 'admin' else "<span style='color: #aaa; font-size: 0.85em;'>Acceso Ilimitado (Admin)</span>"
+        f_exp = u.get('fecha_expiracion')
+        f_str = f_exp[:10] if f_exp else 'Sin definir'
+        exp_info = f"<span style='color: #4ecca3; font-size: 0.85em;'>Expira: {f_str}</span>" if u.get('role') != 'admin' else "<span style='color: #aaa; font-size: 0.85em;'>Acceso Ilimitado (Admin)</span>"
         
         renovacion_form = ""
         if u.get('role') != 'admin':
@@ -408,7 +409,7 @@ async def panel_usuarios(request: Request):
                 {renovacion_form}
             </div>
             <div style="display: flex; gap: 8px;">
-                <a href="/admin/usuarios/editar/{u['id']}" style="background: var(--accent); color: white; padding: 6px 12px; border-radius: 5px; text-decoration: none; font-size: 0.85em; display: flex; align-items: center;">✏️ Editar</a>
+                <a href="/admin/usuarios/editar/{u['id']}" style="background: var(--accent); color: white; padding: 6px 12px; border-radius: 5px; text-decoration: none; font-size: 0.85em; display: flex; align-items: center;">✏️️ Editar</a>
                 <form action="/admin/usuarios/eliminar/{u['id']}" method="post" style="margin: 0;" onsubmit="return confirm('¿Estás seguro de eliminar este usuario?');">
                     <button type="submit" style="background: #ff5555; padding: 6px 12px; font-size: 0.85em; margin: 0;">🗑️ Eliminar</button>
                 </form>
