@@ -70,6 +70,7 @@ def keep_alive():
                 httpx.get(f"{url}/login", timeout=10)
             except:
                 pass
+            import time
             time.sleep(600)
 
 threading.Thread(target=keep_alive, daemon=True).start()
@@ -384,8 +385,12 @@ async def panel_usuarios(request: Request):
     usuarios_html = ""
     for u in res_usuarios.data:
         f_exp = u.get('fecha_expiracion')
-        f_str = f_exp[:10] if f_exp else 'Sin definir'
-        exp_info = f"<span style='color: #4ecca3; font-size: 0.85em;'>Expira: {f_str}</span>" if u.get('role') != 'admin' else "<span style='color: #aaa; font-size: 0.85em;'>Acceso Ilimitado (Admin)</span>"
+        if u.get('role') == 'admin':
+            exp_info = "<span style='color: #aaa; font-size: 0.85em;'>Acceso Ilimitado (Admin)</span>"
+        elif not f_exp:
+            exp_info = "<span style='color: #4ecca3; font-size: 0.85em;'>Acceso Ilimitado (Sin caducidad)</span>"
+        else:
+            exp_info = f"<span style='color: #4ecca3; font-size: 0.85em;'>Expira: {f_exp[:10]}</span>"
         
         renovacion_form = ""
         if u.get('role') != 'admin':
@@ -409,7 +414,7 @@ async def panel_usuarios(request: Request):
                 {renovacion_form}
             </div>
             <div style="display: flex; gap: 8px;">
-                <a href="/admin/usuarios/editar/{u['id']}" style="background: var(--accent); color: white; padding: 6px 12px; border-radius: 5px; text-decoration: none; font-size: 0.85em; display: flex; align-items: center;">✏️️ Editar</a>
+                <a href="/admin/usuarios/editar/{u['id']}" style="background: var(--accent); color: white; padding: 6px 12px; border-radius: 5px; text-decoration: none; font-size: 0.85em; display: flex; align-items: center;">✏️ Editar</a>
                 <form action="/admin/usuarios/eliminar/{u['id']}" method="post" style="margin: 0;" onsubmit="return confirm('¿Estás seguro de eliminar este usuario?');">
                     <button type="submit" style="background: #ff5555; padding: 6px 12px; font-size: 0.85em; margin: 0;">🗑️ Eliminar</button>
                 </form>
@@ -458,7 +463,7 @@ async def panel_usuarios(request: Request):
         </div>
 
         <div class="card" style="margin-bottom: 25px;">
-            <h3 style="margin-top: 0; color: var(--accent);">➕ Crear Nuevo Usuario Directo</h3>
+            <h3 style="margin-top: 0; color: var(--accent);">➕ Crear Nuevo Usuario Directo (Sin Caducidad)</h3>
             <form action="/admin/crear_usuario" method="post">
                 <label style="font-size: 0.9em;">Usuario:</label>
                 <input type="text" name="nuevo_username" required autocomplete="off">
@@ -468,7 +473,7 @@ async def panel_usuarios(request: Request):
                 
                 <label style="font-size: 0.9em;">Rol:</label>
                 <select name="nuevo_role">
-                    <option value="usuario">Usuario Estándar</option>
+                    <option value="usuario">Usuario Estándar (Sin Caducidad)</option>
                     <option value="admin">Administrador</option>
                 </select>
                 
@@ -517,7 +522,13 @@ async def c_usuario(request: Request, nuevo_username: str = Form(...), nuevo_pas
     if user.get("role") != 'admin':
         return HTMLResponse("<h1>403 - Acceso Denegado</h1>", status_code=403)
     password_hash = generar_hash(nuevo_password)
-    supabase.table("usuarios").insert({"username": nuevo_username, "password": password_hash, "role": nuevo_role}).execute()
+    # Los usuarios creados directamente por el admin no llevan fecha_expiracion (ilimitados)
+    supabase.table("usuarios").insert({
+        "username": nuevo_username, 
+        "password": password_hash, 
+        "role": nuevo_role,
+        "fecha_expiracion": None
+    }).execute()
     return RedirectResponse("/admin/usuarios", status_code=303)
 
 @app.get("/admin/usuarios/editar/{id}", response_class=HTMLResponse)
