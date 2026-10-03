@@ -79,9 +79,13 @@ DARK_CSS = """
 :root { --bg: #0e0e1a; --surface: #181828; --accent: #6c63ff; --text: #e0e0f0; } 
 body { background: var(--bg); color: var(--text); font-family: sans-serif; margin: 0; }
 .card { background: var(--surface); padding: 20px; border-radius: 12px; border: 1px solid #333; }
-input, select { width: 100%; padding: 10px; margin-bottom: 10px; border-radius: 5px; border: 1px solid #444; background: #0f0f1a; color: white; }
+input, select { width: 100%; padding: 10px; margin-bottom: 10px; border-radius: 5px; border: 1px solid #444; background: #0f0f1a; color: white; box-sizing: border-box; }
 button { width: 100%; padding: 10px; background: var(--accent); border: none; color: white; border-radius: 5px; cursor: pointer; }
 .error-msg { color: #ff5555; background: rgba(255,85,85,0.1); padding: 10px; border-radius: 5px; margin-bottom: 15px; text-align: center; border: 1px solid #ff5555; }
+.tab-btn { background: #181828; color: #aaa; border: 1px solid #333; padding: 10px 20px; border-radius: 8px 8px 0 0; cursor: pointer; font-weight: bold; transition: 0.2s; }
+.tab-btn.active { background: var(--surface); color: var(--accent); border-bottom: 2px solid var(--accent); }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
 """
 
 @app.get("/instalar-admin-secreto", response_class=HTMLResponse)
@@ -437,54 +441,86 @@ async def panel_usuarios(request: Request):
     <!DOCTYPE html>
     <html>
     <head>
-        <title>Panel de Usuarios</title>
+        <title>Panel de Administración</title>
         <style>{DARK_CSS}</style>
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <script>
+            function switchTab(evt, tabId) {{
+                var contents = document.getElementsByClassName("tab-content");
+                for (var i = 0; i < contents.length; i++) {{
+                    contents[i].classList.remove("active");
+                }}
+                var buttons = document.getElementsByClassName("tab-btn");
+                for (var i = 0; i < buttons.length; i++) {{
+                    buttons[i].classList.remove("active");
+                }}
+                document.getElementById(tabId).classList.add("active");
+                evt.currentTarget.classList.add("active");
+            }}
+        </script>
     </head>
     <body style="padding: 20px; max-width: 800px; margin: 0 auto;">
         <a href="/" style="color: var(--accent); text-decoration: none; font-weight: bold; display: inline-block; margin-bottom: 20px;">← Volver al Inicio</a>
         
-        <div class="card" style="margin-bottom: 25px;">
-            <h3 style="margin-top: 0; color: var(--accent);">🎟️ Códigos de Invitación</h3>
-            <form action="/admin/codigos/generar" method="post" style="margin-bottom: 15px;">
-                <button type="submit" style="max-width: 250px;">Generar Nuevo Código</button>
-            </form>
-            <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9em;">
-                <thead>
-                    <tr style="border-bottom: 2px solid #444; color: #aaa;">
-                        <th style="padding: 8px;">Código</th>
-                        <th style="padding: 8px;">Estado</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {codigos_html if codigos_html else '<tr><td colspan="2" style="padding: 10px; color: #888; text-align: center;">No hay códigos generados</td></tr>'}
-                </tbody>
-            </table>
+        <h2 style="color: #fff; margin-top: 0; margin-bottom: 20px;">⚙️ Panel de Administración</h2>
+
+        <!-- Menú de Pestañas -->
+        <div style="display: flex; gap: 5px; border-bottom: 1px solid #333; margin-bottom: 20px; flex-wrap: wrap;">
+            <button class="tab-btn active" onclick="switchTab(event, 'tab-usuarios')">👥 Usuarios y Licencias</button>
+            <button class="tab-btn" onclick="switchTab(event, 'tab-crear')">➕ Crear Usuario</button>
+            <button class="tab-btn" onclick="switchTab(event, 'tab-codigos')">🎟️ Códigos de Invitación</button>
         </div>
 
-        <div class="card" style="margin-bottom: 25px;">
-            <h3 style="margin-top: 0; color: var(--accent);">➕ Crear Nuevo Usuario Directo (Sin Caducidad)</h3>
-            <form action="/admin/crear_usuario" method="post">
-                <label style="font-size: 0.9em;">Usuario:</label>
-                <input type="text" name="nuevo_username" required autocomplete="off">
-                
-                <label style="font-size: 0.9em;">Contraseña:</label>
-                <input type="password" name="nuevo_password" required>
-                
-                <label style="font-size: 0.9em;">Rol:</label>
-                <select name="nuevo_role">
-                    <option value="usuario">Usuario Estándar (Sin Caducidad)</option>
-                    <option value="admin">Administrador</option>
-                </select>
-                
-                <button type="submit" style="margin-top: 10px;">Registrar Usuario</button>
-            </form>
+        <!-- Pestaña 1: Usuarios y Licencias -->
+        <div id="tab-usuarios" class="tab-content active">
+            <div class="card">
+                <h3 style="margin-top: 0; color: var(--accent);">👥 Gestión de Usuarios y Licencias</h3>
+                <div style="margin-top: 15px;">
+                    {usuarios_html}
+                </div>
+            </div>
         </div>
 
-        <div class="card">
-            <h3 style="margin-top: 0; color: var(--accent);">👥 Usuarios Existentes y Gestión de Licencias</h3>
-            <div style="margin-top: 15px;">
-                {usuarios_html}
+        <!-- Pestaña 2: Crear Usuario -->
+        <div id="tab-crear" class="tab-content">
+            <div class="card">
+                <h3 style="margin-top: 0; color: var(--accent);">➕ Crear Nuevo Usuario Directo (Sin Caducidad)</h3>
+                <form action="/admin/crear_usuario" method="post">
+                    <label style="font-size: 0.9em;">Usuario:</label>
+                    <input type="text" name="nuevo_username" required autocomplete="off">
+                    
+                    <label style="font-size: 0.9em;">Contraseña:</label>
+                    <input type="password" name="nuevo_password" required>
+                    
+                    <label style="font-size: 0.9em;">Rol:</label>
+                    <select name="nuevo_role">
+                        <option value="usuario">Usuario Estándar (Sin Caducidad)</option>
+                        <option value="admin">Administrador</option>
+                    </select>
+                    
+                    <button type="submit" style="margin-top: 10px;">Registrar Usuario</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Pestaña 3: Códigos de Invitación -->
+        <div id="tab-codigos" class="tab-content">
+            <div class="card">
+                <h3 style="margin-top: 0; color: var(--accent);">🎟️ Códigos de Invitación</h3>
+                <form action="/admin/codigos/generar" method="post" style="margin-bottom: 15px;">
+                    <button type="submit" style="max-width: 250px;">Generar Nuevo Código</button>
+                </form>
+                <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9em;">
+                    <thead>
+                        <tr style="border-bottom: 2px solid #444; color: #aaa;">
+                            <th style="padding: 8px;">Código</th>
+                            <th style="padding: 8px;">Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {codigos_html if codigos_html else '<tr><td colspan="2" style="padding: 10px; color: #888; text-align: center;">No hay códigos generados</td></tr>'}
+                    </tbody>
+                </table>
             </div>
         </div>
     </body>
@@ -522,7 +558,6 @@ async def c_usuario(request: Request, nuevo_username: str = Form(...), nuevo_pas
     if user.get("role") != 'admin':
         return HTMLResponse("<h1>403 - Acceso Denegado</h1>", status_code=403)
     password_hash = generar_hash(nuevo_password)
-    # Los usuarios creados directamente por el admin no llevan fecha_expiracion (ilimitados)
     supabase.table("usuarios").insert({
         "username": nuevo_username, 
         "password": password_hash, 
