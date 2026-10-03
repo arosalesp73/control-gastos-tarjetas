@@ -381,13 +381,109 @@ async def panel_usuarios(request: Request):
     res_usuarios = supabase.table("usuarios").select("*").execute()
     res_codigos = supabase.table("codigos_invitacion").select("*").execute()
     
-    return templates.TemplateResponse("usuarios.html", {
-        "request": request, 
-        "user": user, 
-        "lista_usuarios": res_usuarios.data, 
-        "lista_codigos": res_codigos.data,
-        "css": DARK_CSS
-    })
+    # Generar HTML directamente para incluir los botones de renovación por usuario
+    usuarios_html = ""
+    for u in res_usuarios.data:
+        exp_info = f"<span style='color: #4ecca3; font-size: 0.85em;'>Expira: {u.get('fecha_expiracion', 'N/A')[:10]}</span>" if u.get('role') != 'admin' else "<span style='color: #aaa; font-size: 0.85em;'>Acceso Ilimitado (Admin)</span>"
+        
+        renovacion_form = ""
+        if u.get('role') != 'admin':
+            renovacion_form = f"""
+            <form action="/admin/usuarios/renovar" method="post" style="display: flex; gap: 8px; margin-top: 10px; align-items: center; background: rgba(108,99,255,0.05); padding: 8px; border-radius: 6px; border: 1px solid #333;">
+                <input type="hidden" name="id" value="{u['id']}">
+                <select name="anios" style="margin: 0; padding: 6px; font-size: 0.85em; width: 110px;">
+                    <option value="1">1 Año ($120)</option>
+                    <option value="2">2 Años ($200)</option>
+                    <option value="3">3 Años ($300)</option>
+                </select>
+                <button type="submit" style="margin: 0; padding: 6px 12px; font-size: 0.85em; background: #25d366; width: auto; font-weight: bold;">⚡ Renovar</button>
+            </form>
+            """
+
+        usuarios_html += f"""
+        <div style="background: var(--surface); padding: 15px; border-radius: 8px; border: 1px solid #333; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+            <div>
+                <b style="font-size: 1.1em; color: white;">{u['username']}</b> <span style="color: #888; font-size: 0.85em;">(Rol: {u['role']})</span><br>
+                {exp_info}
+                {renovacion_form}
+            </div>
+            <div style="display: flex; gap: 8px;">
+                <a href="/admin/usuarios/editar/{u['id']}" style="background: var(--accent); color: white; padding: 6px 12px; border-radius: 5px; text-decoration: none; font-size: 0.85em; display: flex; align-items: center;">✏️ Editar</a>
+                <form action="/admin/usuarios/eliminar/{u['id']}" method="post" style="margin: 0;" onsubmit="return confirm('¿Estás seguro de eliminar este usuario?');">
+                    <button type="submit" style="background: #ff5555; padding: 6px 12px; font-size: 0.85em; margin: 0;">🗑️ Eliminar</button>
+                </form>
+            </div>
+        </div>
+        """
+
+    codigos_html = ""
+    for c in res_codigos.data:
+        estado_color = "#ff5555" if c['usado'] else "#4ecca3"
+        estado_texto = "Usado" if c['usado'] else "Disponible"
+        codigos_html += f"""
+        <tr>
+            <td style="padding: 10px; border-bottom: 1px solid #333; font-family: monospace; color: #fff;">{c['codigo']}</td>
+            <td style="padding: 10px; border-bottom: 1px solid #333; color: {estado_color}; font-weight: bold;">{estado_texto}</td>
+        </tr>
+        """
+
+    return HTMLResponse(f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Panel de Usuarios</title>
+        <style>{DARK_CSS}</style>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body style="padding: 20px; max-width: 800px; margin: 0 auto;">
+        <a href="/" style="color: var(--accent); text-decoration: none; font-weight: bold; display: inline-block; margin-bottom: 20px;">← Volver al Inicio</a>
+        
+        <div class="card" style="margin-bottom: 25px;">
+            <h3 style="margin-top: 0; color: var(--accent);">🎟️ Códigos de Invitación</h3>
+            <form action="/admin/codigos/generar" method="post" style="margin-bottom: 15px;">
+                <button type="submit" style="max-width: 250px;">Generar Nuevo Código</button>
+            </form>
+            <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9em;">
+                <thead>
+                    <tr style="border-bottom: 2px solid #444; color: #aaa;">
+                        <th style="padding: 8px;">Código</th>
+                        <th style="padding: 8px;">Estado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {codigos_html if codigos_html else '<tr><td colspan="2" style="padding: 10px; color: #888; text-align: center;">No hay códigos generados</td></tr>'}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="card" style="margin-bottom: 25px;">
+            <h3 style="margin-top: 0; color: var(--accent);">➕ Crear Nuevo Usuario Directo</h3>
+            <form action="/admin/crear_usuario" method="post">
+                <label style="font-size: 0.9em;">Usuario:</label>
+                <input type="text" name="nuevo_username" required autocomplete="off">
+                
+                <label style="font-size: 0.9em;">Contraseña:</label>
+                <input type="password" name="nuevo_password" required>
+                
+                <label style="font-size: 0.9em;">Rol:</label>
+                <select name="nuevo_role">
+                    <option value="usuario">Usuario Estándar</option>
+                    <option value="admin">Administrador</option>
+                </select>
+                
+                <button type="submit" style="margin-top: 10px;">Registrar Usuario</button>
+            </form>
+        </div>
+
+        <div class="card">
+            <h3 style="margin-top: 0; color: var(--accent);">👥 Usuarios Existentes y Gestión de Licencias</h3>
+            <div style="margin-top: 15px;">
+                {usuarios_html}
+            </div>
+        </div>
+    </body>
+    </html>
+    """)
 
 @app.post("/admin/usuarios/renovar")
 async def admin_renovar_licencia(request: Request, id: int = Form(...), anios: int = Form(...)):
