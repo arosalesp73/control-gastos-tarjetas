@@ -674,25 +674,66 @@ async def n_mov(request: Request, tarjeta: str, success: bool = False):
         "nombre_tarjeta": tarjeta, 
         "movimientos": res.data, 
         "css": DARK_CSS,
-        "success": success
+        "success": success,
+        "hoy": datetime.now().strftime("%Y-%m-%d")
     })
 
 @app.post("/movimientos/guardar")
-async def g_mov(request: Request, tarjeta_nombre: str = Form(...), concepto: str = Form(...), monto: float = Form(...), tipo_movimiento: str = Form(...), fecha: str = Form(...)):
+async def g_mov(
+    request: Request, 
+    tarjeta_nombre: str = Form(...), 
+    concepto: str = Form(...), 
+    monto: float = Form(...), 
+    tipo_movimiento: str = Form(...), 
+    fecha: str = Form(...),
+    es_msi: str = Form(None),
+    plazos: int = Form(1),
+    monto_total: float = Form(None)
+):
     user = request.session.get("user")
     if not user: return RedirectResponse("/login")
     
-    monto_f = monto * -1 if tipo_movimiento == 'abono' else monto
-    supabase.table("movimientos").insert({
-        "tarjeta": tarjeta_nombre, 
-        "concepto": concepto, 
-        "monto": monto_f, 
-        "fecha": fecha, 
-        "usuario_id": user["id"], 
-        "tipo": tipo_movimiento
-    }).execute()
+    fecha_base = datetime.strptime(fecha, "%Y-%m-%d")
     
-    return RedirectResponse(f"/movimientos/nuevo/{tarjeta_nombre}?success=true", status_code=303)
+    if es_msi == "si" and plazos > 1 and monto_total:
+        # Generar automáticamente las mensualidades mes a mes (Opción A)
+        mensualidad = round(monto_total / plazos, 2)
+        monto_f = mensualidad * -1 if tipo_movimiento == 'abono' else mensualidad
+        
+        for i in range(plazos):
+            # Calcular la fecha sumando 'i' meses de forma segura
+            meses_a_sumar = i
+            nuevo_mes = fecha_base.month - 1 + meses_a_sumar
+            aniod = fecha_base.year + nuevo_mes // 12
+            mesd = nuevo_mes % 12 + 1
+            # Ajustar al último día del mes si el día excede (ej. febrero)
+            dias_en_mes = (datetime(aniod + 1, 1, 1) - timedelta(days=1)).day if mesd == 12 else (datetime(aniod, mesd + 1, 1) - timedelta(days=1)).day
+            diad = min(fecha_base.day, dias_en_mes)
+            
+            fecha_mensualidad = datetime(aniod, mesd, diad).strftime("%Y-%m-%d")
+            concepto_msi = f"{concepto} (Mensualidad {i+1} de {plazos})"
+            
+            supabase.table("movimientos").insert({
+                "tarjeta": tarjeta_nombre, 
+                "concepto": concepto_msi, 
+                "monto": monto_f, 
+                "fecha": fecha_mensualidad, 
+                "usuario_id": user["id"], 
+                "tipo": tipo_movimiento
+            }).execute()
+    else:
+        # Movimiento normal de un solo pago
+        monto_f = monto * -1 if tipo_movimiento == 'abono' else monto
+        supabase.table("movimientos").insert({
+            "tarjeta": tarjeta_nombre, 
+            "concepto": concepto, 
+            "monto": monto_f, 
+            "fecha": fecha, 
+            "usuario_id": user["id"], 
+            "tipo": tipo_movimiento
+        }).execute()
+    
+    return RedirectResponse(f"/movimientos/nuevo/{urllib.parse.quote(tarjeta_nombre)}?success=true", status_code=303)
 
 @app.get("/movimientos/editar/{id}", response_class=HTMLResponse)
 async def f_editar_mov(request: Request, id: int, error: str = None):
