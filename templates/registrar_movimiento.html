@@ -5,6 +5,21 @@
     <style>{{ css | safe }}</style>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script>
+        function toggleTipoMovimiento(select) {
+            var bloqueMsi = document.getElementById('bloque-msi-wrapper');
+            var checkboxMsi = document.getElementById('es_msi');
+            
+            if (select.value === 'abono') {
+                // Si es abono, ocultamos y desactivamos los MSI
+                bloqueMsi.style.display = 'none';
+                checkboxMsi.checked = false;
+                toggleMsi(checkboxMsi);
+            } else {
+                // Si es cargo, mostramos la opción de MSI
+                bloqueMsi.style.display = 'block';
+            }
+        }
+
         function toggleMsi(checkbox) {
             var msiContainer = document.getElementById('msi-container');
             if (checkbox.checked) {
@@ -58,13 +73,13 @@
             <input type="text" name="concepto" required autocomplete="off" placeholder="Ej. Compra en tienda o artículo">
             
             <label>Tipo de Movimiento:</label>
-            <select name="tipo_movimiento">
+            <select name="tipo_movimiento" id="tipo_movimiento" onchange="toggleTipoMovimiento(this)">
                 <option value="cargo">Cargo / Compra</option>
                 <option value="abono">Abono / Pago</option>
             </select>
 
-            <!-- Checkbox de MSI -->
-            <div style="margin: 15px 0; background: rgba(108,99,255,0.08); padding: 12px; border-radius: 8px; border: 1px solid var(--accent);">
+            <!-- Checkbox de MSI (Envuelto en un div con ID para ocultarlo en Abonos) -->
+            <div id="bloque-msi-wrapper" style="margin: 15px 0; background: rgba(108,99,255,0.08); padding: 12px; border-radius: 8px; border: 1px solid var(--accent);">
                 <label style="display: flex; align-items: center; cursor: pointer; margin: 0; color: #fff; font-weight: bold;">
                     <input type="checkbox" id="es_msi" name="es_msi" value="si" onchange="toggleMsi(this)" style="width: 20px; height: 20px; margin-right: 10px; margin-bottom: 0; cursor: pointer;">
                     ⚡ ¿Es a Meses Sin Intereses (MSI)?
