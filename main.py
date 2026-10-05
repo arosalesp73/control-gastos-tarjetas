@@ -179,9 +179,13 @@ async def g_registro_inicial(username: str = Form(...), password: str = Form(...
 @app.get("/", response_class=HTMLResponse)
 async def inicio(request: Request):
     user = request.session.get("user")
-    if not user: return RedirectResponse("/login")
-    res = supabase.table("tarjetas").select("*").eq("usuario_id", user["id"]).execute()
-    return templates.TemplateResponse("index.html", {"request": request, "user": user, "tarjetas": res.data, "css": DARK_CSS})
+    if user:
+        # Si ya inició sesión, muestra sus tarjetas normalmente
+        res = supabase.table("tarjetas").select("*").eq("usuario_id", user["id"]).execute()
+        return templates.TemplateResponse("index.html", {"request": request, "user": user, "tarjetas": res.data, "css": DARK_CSS})
+    else:
+        # Si no ha iniciado sesión, muestra la Landing Page de bienvenida
+        return templates.TemplateResponse("landing.html", {"request": request, "css": DARK_CSS})
 
 @app.get("/login", response_class=HTMLResponse)
 async def login_ui(request: Request, error: str = None):
